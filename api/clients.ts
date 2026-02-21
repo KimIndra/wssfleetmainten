@@ -16,17 +16,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         if (req.method === 'POST') {
-            const { id, name, contactPerson, phone } = req.body;
-            if (!id || !name || !contactPerson || !phone) {
-                return res.status(400).json({ error: 'Missing required fields: id, name, contactPerson, phone' });
+            // Parse body safely - support both pre-parsed and string bodies
+            let body = req.body;
+            if (typeof body === 'string') {
+                try { body = JSON.parse(body); } catch { body = {}; }
             }
-            const [created] = await db.insert(clients).values({ id, name, contactPerson, phone }).returning();
+            body = body ?? {};
+
+            const { name, contactPerson, phone } = body as {
+                name?: string;
+                contactPerson?: string;
+                phone?: string;
+            };
+
+            if (!name || !contactPerson || !phone) {
+                return res.status(400).json({
+                    error: `Field wajib kosong. Diterima: name="${name}", contactPerson="${contactPerson}", phone="${phone}"`
+                });
+            }
+
+            // Generate ID di server-side agar aman
+            const id = `c-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+
+            const [created] = await db.insert(clients)
+                .values({ id, name, contactPerson, phone })
+                .returning();
+
             return res.status(201).json(created);
         }
 
         return res.status(405).json({ error: 'Method not allowed' });
     } catch (err: any) {
-        console.error('[/api/clients]', err);
-        return res.status(500).json({ error: err.message ?? 'Internal server error' });
+        console.error('[/api/clients] Error:', err);
+        return res.status(500).json({
+            error: err.message ?? 'Internal server error',
+            detail: String(err)
+        });
     }
 }
