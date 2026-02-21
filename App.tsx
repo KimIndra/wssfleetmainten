@@ -5,8 +5,7 @@ import Monitoring from './components/Monitoring';
 import TruckList from './components/TruckList';
 import ServiceHistory from './components/ServiceHistory';
 import Reports from './components/Reports';
-import { ViewState, Truck, ServiceRecord } from './types';
-import { CLIENTS } from './constants';
+import { ViewState, Truck, ServiceRecord, Client } from './types';
 import { api } from './lib/api';
 
 const App: React.FC = () => {
@@ -15,6 +14,7 @@ const App: React.FC = () => {
   // App State (from Database)
   const [trucks, setTrucks] = useState<Truck[]>([]);
   const [services, setServices] = useState<ServiceRecord[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,15 +23,17 @@ const App: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const [trucksData, servicesData] = await Promise.all([
+      const [trucksData, servicesData, clientsData] = await Promise.all([
         api.trucks.list(),
         api.services.list(),
+        api.clients.list(),
       ]);
       setTrucks(trucksData);
       setServices(servicesData);
+      setClients(clientsData);
     } catch (err: any) {
       console.error('Failed to load data:', err);
-      setError(err.message ?? 'Gagal memuat data dari server');
+      setError(err.message ?? 'Gagal memuat data dari server. Pastikan DATABASE_URL sudah diset di Vercel.');
     } finally {
       setLoading(false);
     }
@@ -42,44 +44,27 @@ const App: React.FC = () => {
   }, [loadData]);
 
   // ── Handlers ───────────────────────────────────────────────
-  const handleAddTruck = async (newTruck: Truck) => {
-    try {
-      const created = await api.trucks.create(newTruck);
-      setTrucks(prev => [...prev, created]);
-    } catch (err: any) {
-      alert('Gagal menambah truk: ' + err.message);
-    }
+  const handleAddTruck = async (newTruck: Truck): Promise<void> => {
+    const created = await api.trucks.create(newTruck);
+    setTrucks(prev => [...prev, created]);
   };
 
-  const handleEditTruck = async (updatedTruck: Truck) => {
-    try {
-      const updated = await api.trucks.update(updatedTruck.id, updatedTruck);
-      setTrucks(prev => prev.map(t => t.id === updated.id ? updated : t));
-    } catch (err: any) {
-      alert('Gagal mengupdate truk: ' + err.message);
-    }
+  const handleEditTruck = async (updatedTruck: Truck): Promise<void> => {
+    const updated = await api.trucks.update(updatedTruck.id, updatedTruck);
+    setTrucks(prev => prev.map(t => t.id === updated.id ? updated : t));
   };
 
-  const handleUpdateOdometer = async (truckId: string, addedKm: number) => {
-    try {
-      const updated = await api.trucks.updateOdometer(truckId, addedKm);
-      setTrucks(prev => prev.map(t => t.id === updated.id ? { ...t, ...updated } : t));
-    } catch (err: any) {
-      alert('Gagal mengupdate odometer: ' + err.message);
-    }
+  const handleUpdateOdometer = async (truckId: string, addedKm: number): Promise<void> => {
+    const updated = await api.trucks.updateOdometer(truckId, addedKm);
+    setTrucks(prev => prev.map(t => t.id === updated.id ? { ...t, ...updated } : t));
   };
 
-  const handleAddService = async (newService: ServiceRecord) => {
-    try {
-      const created = await api.services.create(newService);
-      // 1. Add service record
-      setServices(prev => [created, ...prev]);
-      // 2. Refresh trucks to get updated odometer/service dates
-      const updatedTrucks = await api.trucks.list();
-      setTrucks(updatedTrucks);
-    } catch (err: any) {
-      alert('Gagal menambah riwayat servis: ' + err.message);
-    }
+  const handleAddService = async (newService: ServiceRecord): Promise<void> => {
+    const created = await api.services.create(newService);
+    setServices(prev => [created, ...prev]);
+    // Refresh trucks to get updated odometer/service dates
+    const updatedTrucks = await api.trucks.list();
+    setTrucks(updatedTrucks);
   };
 
   // ── Render ─────────────────────────────────────────────────
@@ -122,7 +107,7 @@ const App: React.FC = () => {
         return (
           <TruckList
             trucks={trucks}
-            clients={CLIENTS}
+            clients={clients}
             onAddTruck={handleAddTruck}
             onEditTruck={handleEditTruck}
           />

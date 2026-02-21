@@ -6,7 +6,7 @@ import { format } from 'date-fns';
 
 interface MonitoringProps {
   trucks: Truck[];
-  onUpdateOdometer: (truckId: string, addedKm: number) => void;
+  onUpdateOdometer: (truckId: string, addedKm: number) => Promise<void>;
 }
 
 // Estimated Cost Dictionary (Min, Max) based on Truck Size
@@ -21,26 +21,35 @@ const SERVICE_COST_RANGES: Record<string, { Small: [number, number]; Big: [numbe
 const Monitoring: React.FC<MonitoringProps> = ({ trucks, onUpdateOdometer }) => {
   const [selectedTruckId, setSelectedTruckId] = useState<string | null>(null);
   const [tripDistance, setTripDistance] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const currentMonth = format(new Date(), 'MMMM yyyy');
 
   const filteredTrucks = trucks.filter(truck => {
     const aggStatus = getAggregatedServiceStatus(truck);
-    
+
     // Logic: Show if status is NOT ok OR if the nearest date is within this month
     const isUrgent = aggStatus.status !== 'ok';
     const nearestMonth = format(aggStatus.nearestDate, 'MMMM yyyy');
     const isThisMonth = nearestMonth === currentMonth;
-    
+
     return isUrgent || isThisMonth;
   });
 
-  const handleTripSubmit = (e: React.FormEvent) => {
+  const handleTripSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedTruckId && tripDistance) {
-      onUpdateOdometer(selectedTruckId, parseInt(tripDistance));
+    if (!selectedTruckId || !tripDistance) return;
+
+    setIsSubmitting(true);
+    try {
+      await onUpdateOdometer(selectedTruckId, parseInt(tripDistance));
+      // Tutup modal hanya jika berhasil
       setTripDistance('');
       setSelectedTruckId(null);
+    } catch (err: any) {
+      alert('Gagal update odometer: ' + (err.message ?? 'Terjadi kesalahan'));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -57,9 +66,9 @@ const Monitoring: React.FC<MonitoringProps> = ({ trucks, onUpdateOdometer }) => 
     itemsDue.forEach(item => {
       // Clean up string (e.g., remove " (Segera)" or " (Overdue)")
       const cleanName = item.split('(')[0].trim().toLowerCase();
-      
+
       let matchedKey = 'General Checkup';
-      
+
       // Keyword matching
       if (cleanName.includes('oli') || cleanName.includes('oil')) matchedKey = 'Oil Change';
       else if (cleanName.includes('rem') || cleanName.includes('brake')) matchedKey = 'Brake System';
@@ -87,14 +96,14 @@ const Monitoring: React.FC<MonitoringProps> = ({ trucks, onUpdateOdometer }) => 
         {filteredTrucks.map(truck => {
           const agg = getAggregatedServiceStatus(truck);
           const estCost = getEstimatedCostRange(truck, agg.itemsDue);
-          
-          const statusColor = agg.status === 'overdue' ? 'border-red-500 bg-red-50' 
-            : agg.status === 'warning' ? 'border-yellow-500 bg-yellow-50' 
-            : 'border-green-500 bg-white';
-          
-          const badgeColor = agg.status === 'overdue' ? 'bg-red-100 text-red-700' 
-            : agg.status === 'warning' ? 'bg-yellow-100 text-yellow-700' 
-            : 'bg-green-100 text-green-700';
+
+          const statusColor = agg.status === 'overdue' ? 'border-red-500 bg-red-50'
+            : agg.status === 'warning' ? 'border-yellow-500 bg-yellow-50'
+              : 'border-green-500 bg-white';
+
+          const badgeColor = agg.status === 'overdue' ? 'bg-red-100 text-red-700'
+            : agg.status === 'warning' ? 'bg-yellow-100 text-yellow-700'
+              : 'bg-green-100 text-green-700';
 
           return (
             <div key={truck.id} className={`rounded-xl border-l-4 p-5 shadow-sm bg-white hover:shadow-md transition-shadow ${statusColor.split(' ')[0]} flex flex-col h-full`}>
@@ -110,61 +119,61 @@ const Monitoring: React.FC<MonitoringProps> = ({ trucks, onUpdateOdometer }) => 
 
               <div className="space-y-4 mb-4 flex-1">
                 <div className="flex justify-between items-center border-b border-gray-100 pb-2">
-                   <span className="text-gray-500 text-sm">Odometer Saat Ini</span>
-                   <span className="font-mono font-bold text-lg text-gray-800">{truck.currentOdometer.toLocaleString()} KM</span>
+                  <span className="text-gray-500 text-sm">Odometer Saat Ini</span>
+                  <span className="font-mono font-bold text-lg text-gray-800">{truck.currentOdometer.toLocaleString()} KM</span>
                 </div>
 
                 {/* Alerts for Specific Items */}
                 {agg.itemsDue.length > 0 && (
-                   <div className="bg-white border border-red-100 rounded-lg p-2 space-y-1">
-                      {agg.itemsDue.map((item, idx) => (
-                        <div key={idx} className="flex items-center text-xs text-red-600 font-bold">
-                           <AlertCircle size={12} className="mr-1" /> {item}
-                        </div>
-                      ))}
-                   </div>
+                  <div className="bg-white border border-red-100 rounded-lg p-2 space-y-1">
+                    {agg.itemsDue.map((item, idx) => (
+                      <div key={idx} className="flex items-center text-xs text-red-600 font-bold">
+                        <AlertCircle size={12} className="mr-1" /> {item}
+                      </div>
+                    ))}
+                  </div>
                 )}
 
                 {/* Suggestion Section */}
                 <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                    <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center">
-                        <Wrench size={12} className="mr-1" /> Target Service Terdekat
-                    </h4>
-                    
-                    <div className="space-y-2">
-                        {/* KM Prediction */}
-                        <div className="flex items-center justify-between text-sm text-gray-700">
-                            <div className="flex items-center">
-                                <Gauge className="w-4 h-4 mr-2 opacity-70" />
-                                <span>Target KM</span>
-                            </div>
-                            <span className="font-semibold">{(truck.currentOdometer + agg.nearestKm).toLocaleString()}</span>
-                        </div>
-                        
-                        {/* Time Prediction */}
-                        <div className="flex items-center justify-between text-sm text-gray-700">
-                            <div className="flex items-center">
-                                <Clock className="w-4 h-4 mr-2 opacity-70" />
-                                <span>Target Waktu</span>
-                            </div>
-                            <span className="font-semibold">{formatDate(agg.nearestDate.toISOString())}</span>
-                        </div>
+                  <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center">
+                    <Wrench size={12} className="mr-1" /> Target Service Terdekat
+                  </h4>
 
-                        {/* Cost Prediction */}
-                        <div className="flex flex-col text-sm text-gray-700 mt-2 border-t border-slate-200 pt-2">
-                            <div className="flex items-center mb-1">
-                                <Wallet className="w-4 h-4 mr-2 opacity-70" />
-                                <span>Est. Biaya</span>
-                            </div>
-                            <span className="font-semibold text-blue-600 text-right">
-                              {formatCurrency(estCost.min)} - {formatCurrency(estCost.max)}
-                            </span>
-                        </div>
+                  <div className="space-y-2">
+                    {/* KM Prediction */}
+                    <div className="flex items-center justify-between text-sm text-gray-700">
+                      <div className="flex items-center">
+                        <Gauge className="w-4 h-4 mr-2 opacity-70" />
+                        <span>Target KM</span>
+                      </div>
+                      <span className="font-semibold">{(truck.currentOdometer + agg.nearestKm).toLocaleString()}</span>
                     </div>
+
+                    {/* Time Prediction */}
+                    <div className="flex items-center justify-between text-sm text-gray-700">
+                      <div className="flex items-center">
+                        <Clock className="w-4 h-4 mr-2 opacity-70" />
+                        <span>Target Waktu</span>
+                      </div>
+                      <span className="font-semibold">{formatDate(agg.nearestDate.toISOString())}</span>
+                    </div>
+
+                    {/* Cost Prediction */}
+                    <div className="flex flex-col text-sm text-gray-700 mt-2 border-t border-slate-200 pt-2">
+                      <div className="flex items-center mb-1">
+                        <Wallet className="w-4 h-4 mr-2 opacity-70" />
+                        <span>Est. Biaya</span>
+                      </div>
+                      <span className="font-semibold text-blue-600 text-right">
+                        {formatCurrency(estCost.min)} - {formatCurrency(estCost.max)}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <button 
+              <button
                 onClick={() => setSelectedTruckId(truck.id)}
                 className="w-full flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg transition-colors"
               >
@@ -193,8 +202,8 @@ const Monitoring: React.FC<MonitoringProps> = ({ trucks, onUpdateOdometer }) => 
             <form onSubmit={handleTripSubmit}>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Jarak Tujuan (KM)</label>
-                <input 
-                  type="number" 
+                <input
+                  type="number"
                   min="1"
                   className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none"
                   value={tripDistance}
@@ -204,18 +213,22 @@ const Monitoring: React.FC<MonitoringProps> = ({ trucks, onUpdateOdometer }) => 
                 />
               </div>
               <div className="flex justify-end space-x-3">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => setSelectedTruckId(null)}
-                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                  disabled={isSubmitting}
+                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg disabled:opacity-50"
                 >
                   Batal
                 </button>
-                <button 
-                  type="submit" 
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
                 >
-                  Simpan Perjalanan
+                  {isSubmitting
+                    ? <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Menyimpan...</>
+                    : 'Simpan Perjalanan'}
                 </button>
               </div>
             </form>
