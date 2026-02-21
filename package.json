@@ -1,0 +1,33 @@
+{
+  "name": "wss-fleet-manager",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "db:push": "dotenv -e .env.local -- drizzle-kit push",
+    "db:seed": "dotenv -e .env.local -- tsx db/seed.ts",
+    "db:studio": "dotenv -e .env.local -- drizzle-kit studio"
+  },
+  "dependencies": {
+    "date-fns": "^4.1.0",
+    "drizzle-orm": "^0.39.3",
+    "@neondatabase/serverless": "^0.10.4",
+    "lucide-react": "^0.574.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "recharts": "^3.7.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@vercel/node": "^5.0.2",
+    "@vitejs/plugin-react": "^5.0.0",
+    "dotenv-cli": "^8.0.0",
+    "drizzle-kit": "^0.30.4",
+    "tsx": "^4.19.3",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0"
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "name": "WSS Fleet Manager",
+  "description": "Sistem Manajemen Ekspedisi & Perawatan Truk PT Wahana Sumber Sakti. Monitoring jadwal service, riwayat suku cadang, dan pelaporan armada.",
+  "requestFramePermissions": []
+}
