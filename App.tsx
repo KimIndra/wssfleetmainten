@@ -5,6 +5,7 @@ import Monitoring from './components/Monitoring';
 import TruckList from './components/TruckList';
 import ServiceHistory from './components/ServiceHistory';
 import Reports from './components/Reports';
+import ClientManagement from './components/ClientManagement';
 import { ViewState, Truck, ServiceRecord, Client } from './types';
 import { api } from './lib/api';
 
@@ -67,6 +68,11 @@ const App: React.FC = () => {
     setTrucks(updatedTrucks);
   };
 
+  const handleAddClient = async (newClient: Client): Promise<void> => {
+    const created = await api.clients.create(newClient);
+    setClients(prev => [...prev, created]);
+  };
+
   // ── Render ─────────────────────────────────────────────────
   if (loading) {
     return (
@@ -122,6 +128,13 @@ const App: React.FC = () => {
         );
       case 'reports':
         return <Reports services={services} trucks={trucks} />;
+      case 'clients':
+        return (
+          <ClientManagement
+            clients={clients}
+            onAddClient={handleAddClient}
+          />
+        );
       default:
         return <Dashboard trucks={trucks} services={services} />;
     }

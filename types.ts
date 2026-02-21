@@ -27,9 +27,9 @@ export interface Truck {
   tonnage: number;
   clientId: string;
   currentOdometer: number;
-  
+
   // General/Main Service (Legacy/Default)
-  lastServiceDate: string; 
+  lastServiceDate: string;
   lastServiceOdometer: number;
   serviceIntervalKm: number;
   serviceIntervalMonths: number;
@@ -51,7 +51,7 @@ export interface ServiceRecord {
   truckId: string;
   serviceDate: string; // ISO Date
   odometer: number;
-  serviceTypes: string[]; 
+  serviceTypes: string[];
   description: string;
   parts: SparePart[];
   laborCost: number;
@@ -59,4 +59,4 @@ export interface ServiceRecord {
   mechanic: string;
 }
 
-export type ViewState = 'dashboard' | 'monitoring' | 'trucks' | 'history' | 'reports';
+export type ViewState = 'dashboard' | 'monitoring' | 'trucks' | 'history' | 'reports' | 'clients';
