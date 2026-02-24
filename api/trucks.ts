@@ -1,13 +1,48 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
-import { trucks, serviceSchedules, clients } from './_schema';
+import { pgTable, text, integer, real, timestamp } from 'drizzle-orm/pg-core';
 import { eq } from 'drizzle-orm';
+
+const clientsTable = pgTable('clients', {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    contactPerson: text('contact_person').notNull(),
+    phone: text('phone').notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+const trucksTable = pgTable('trucks', {
+    id: text('id').primaryKey(),
+    plateNumber: text('plate_number').notNull(),
+    brand: text('brand').notNull(),
+    model: text('model').notNull(),
+    year: integer('year').notNull(),
+    size: text('size').notNull(),
+    tonnage: real('tonnage').notNull(),
+    clientId: text('client_id').notNull(),
+    currentOdometer: integer('current_odometer').notNull().default(0),
+    lastServiceDate: text('last_service_date'),
+    lastServiceOdometer: integer('last_service_odometer').default(0),
+    serviceIntervalKm: integer('service_interval_km').notNull().default(10000),
+    serviceIntervalMonths: integer('service_interval_months').notNull().default(6),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+const schedulesTable = pgTable('service_schedules', {
+    id: text('id').primaryKey(),
+    truckId: text('truck_id').notNull(),
+    serviceName: text('service_name').notNull(),
+    intervalKm: integer('interval_km').notNull(),
+    intervalMonths: integer('interval_months').notNull(),
+    lastServiceDate: text('last_service_date'),
+    lastServiceOdometer: integer('last_service_odometer').default(0),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+});
 
 function getDb() {
     const url = process.env.DATABASE_URL!;
-    const cleanUrl = url.replace(/[&?]channel_binding=[^&]*/g, '');
-    return drizzle(neon(cleanUrl));
+    return drizzle(neon(url.replace(/[&?]channel_binding=[^&]*/g, '')));
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -21,9 +56,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const db = getDb();
 
         if (req.method === 'GET') {
-            const allTrucks = await db.select().from(trucks).orderBy(trucks.brand);
-            const allSchedules = await db.select().from(serviceSchedules);
-            const allClients = await db.select().from(clients);
+            const allTrucks = await db.select().from(trucksTable).orderBy(trucksTable.brand);
+            const allSchedules = await db.select().from(schedulesTable);
+            const allClients = await db.select().from(clientsTable);
 
             const result = allTrucks.map(truck => ({
                 ...truck,
@@ -36,22 +71,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         if (req.method === 'POST') {
             let body = req.body;
-            if (typeof body === 'string') {
-                try { body = JSON.parse(body); } catch { body = {}; }
-            }
+            if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
             body = body || {};
 
-            const {
-                id, plateNumber, brand, model, year, size, tonnage, clientId,
+            const { id, plateNumber, brand, model, year, size, tonnage, clientId,
                 currentOdometer, lastServiceDate, lastServiceOdometer,
-                serviceIntervalKm, serviceIntervalMonths, schedules = []
-            } = body;
+                serviceIntervalKm, serviceIntervalMonths, schedules = [] } = body;
 
             if (!id || !plateNumber || !brand || !model || !year || !size || !tonnage || !clientId) {
                 return res.status(400).json({ error: 'Missing required truck fields' });
             }
 
-            const [created] = await db.insert(trucks).values({
+            const [created] = await db.insert(trucksTable).values({
                 id, plateNumber, brand, model, year, size, tonnage, clientId,
                 currentOdometer: currentOdometer ?? 0,
                 lastServiceDate: lastServiceDate ?? null,
@@ -62,18 +93,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             if (schedules.length > 0) {
                 const newSchedules = schedules.map((s: any) => ({
-                    id: s.id,
-                    truckId: id,
-                    serviceName: s.serviceName,
-                    intervalKm: s.intervalKm,
-                    intervalMonths: s.intervalMonths,
+                    id: s.id, truckId: id, serviceName: s.serviceName,
+                    intervalKm: s.intervalKm, intervalMonths: s.intervalMonths,
                     lastServiceDate: s.lastServiceDate ?? null,
                     lastServiceOdometer: s.lastServiceOdometer ?? 0,
                 }));
-                await db.insert(serviceSchedules).values(newSchedules);
+                await db.insert(schedulesTable).values(newSchedules);
             }
 
-            const insertedSchedules = await db.select().from(serviceSchedules).where(eq(serviceSchedules.truckId, id));
+            const insertedSchedules = await db.select().from(schedulesTable).where(eq(schedulesTable.truckId, id));
             return res.status(201).json({ ...created, schedules: insertedSchedules });
         }
 
