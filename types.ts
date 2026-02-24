@@ -24,7 +24,6 @@ export interface Truck {
   model: string;
   year: number;
   size: TruckSize;
-  tonnage: number;
   clientId: string;
   currentOdometer: number;
 

@@ -11,7 +11,6 @@ const trucksTable = pgTable('trucks', {
     model: text('model').notNull(),
     year: integer('year').notNull(),
     size: text('size').notNull(),
-    tonnage: real('tonnage').notNull(),
     clientId: text('client_id').notNull(),
     currentOdometer: integer('current_odometer').notNull().default(0),
     lastServiceDate: text('last_service_date'),
@@ -75,12 +74,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
             body = body || {};
 
-            const { plateNumber, brand, model, year, size, tonnage, clientId,
+            const { plateNumber, brand, model, year, size, clientId,
                 currentOdometer, lastServiceDate, lastServiceOdometer,
                 serviceIntervalKm, serviceIntervalMonths, schedules } = body;
 
             const [updated] = await db.update(trucksTable)
-                .set({ plateNumber, brand, model, year, size, tonnage, clientId, currentOdometer, lastServiceDate, lastServiceOdometer, serviceIntervalKm, serviceIntervalMonths })
+                .set({ plateNumber, brand, model, year, size, clientId, currentOdometer, lastServiceDate, lastServiceOdometer, serviceIntervalKm, serviceIntervalMonths })
                 .where(eq(trucksTable.id, id)).returning();
 
             if (!updated) return res.status(404).json({ error: 'Truck not found' });

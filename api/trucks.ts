@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
-import { pgTable, text, integer, real, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, timestamp } from 'drizzle-orm/pg-core';
 import { eq } from 'drizzle-orm';
 
 const clientsTable = pgTable('clients', {
@@ -19,7 +19,6 @@ const trucksTable = pgTable('trucks', {
     model: text('model').notNull(),
     year: integer('year').notNull(),
     size: text('size').notNull(),
-    tonnage: real('tonnage').notNull(),
     clientId: text('client_id').notNull(),
     currentOdometer: integer('current_odometer').notNull().default(0),
     lastServiceDate: text('last_service_date'),
@@ -74,16 +73,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
             body = body || {};
 
-            const { id, plateNumber, brand, model, year, size, tonnage, clientId,
+            const { id, plateNumber, brand, model, year, size, clientId,
                 currentOdometer, lastServiceDate, lastServiceOdometer,
                 serviceIntervalKm, serviceIntervalMonths, schedules = [] } = body;
 
-            if (!id || !plateNumber || !brand || !model || !year || !size || !tonnage || !clientId) {
+            if (!id || !plateNumber || !brand || !model || !year || !size || !clientId) {
                 return res.status(400).json({ error: 'Missing required truck fields' });
             }
 
             const [created] = await db.insert(trucksTable).values({
-                id, plateNumber, brand, model, year, size, tonnage, clientId,
+                id, plateNumber, brand, model, year, size, clientId,
                 currentOdometer: currentOdometer ?? 0,
                 lastServiceDate: lastServiceDate ?? null,
                 lastServiceOdometer: lastServiceOdometer ?? 0,

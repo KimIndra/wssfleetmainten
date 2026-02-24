@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Truck, Client, ServiceSchedule } from '../types';
-import { Search, Plus, Pencil, Weight, Trash, Calendar, Settings } from 'lucide-react';
+import { Search, Plus, Pencil, Trash, Calendar, Settings } from 'lucide-react';
 
 interface TruckListProps {
   trucks: Truck[];
@@ -12,7 +12,7 @@ interface TruckListProps {
 const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEditTruck }) => {
   const [filterClient, setFilterClient] = useState<string>('all');
   const [filterSize, setFilterSize] = useState<string>('all');
-  const [filterCapacity, setFilterCapacity] = useState<string>('all');
+
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -21,7 +21,6 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
   // New Truck Form State
   const initialFormState: Partial<Truck> = {
     size: 'Big',
-    tonnage: 0,
     serviceIntervalKm: 10000,
     serviceIntervalMonths: 6,
     currentOdometer: 0,
@@ -44,13 +43,7 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
     const matchesSearch = truck.plateNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       truck.brand.toLowerCase().includes(searchTerm.toLowerCase());
 
-    // Capacity Filter Logic
-    let matchesCapacity = true;
-    if (filterCapacity === 'light') matchesCapacity = truck.tonnage < 5;
-    else if (filterCapacity === 'medium') matchesCapacity = truck.tonnage >= 5 && truck.tonnage <= 10;
-    else if (filterCapacity === 'heavy') matchesCapacity = truck.tonnage > 10;
-
-    return matchesClient && matchesSize && matchesCapacity && matchesSearch;
+    return matchesClient && matchesSize && matchesSearch;
   });
 
   const handleOpenAdd = () => {
@@ -165,16 +158,7 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
           <option value="Big">Besar (Big)</option>
         </select>
 
-        <select
-          className="border border-gray-300 rounded-lg py-2 px-3 outline-none focus:ring-2 focus:ring-blue-500"
-          value={filterCapacity}
-          onChange={e => setFilterCapacity(e.target.value)}
-        >
-          <option value="all">Semua Kapasitas</option>
-          <option value="light">Ringan (&lt; 5 Ton)</option>
-          <option value="medium">Sedang (5 - 10 Ton)</option>
-          <option value="heavy">Berat (&gt; 10 Ton)</option>
-        </select>
+
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
@@ -186,7 +170,7 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
                 <th className="p-4 font-semibold">Merk/Model</th>
                 <th className="p-4 font-semibold">Client</th>
                 <th className="p-4 font-semibold">Kategori</th>
-                <th className="p-4 font-semibold">Kapasitas</th>
+
                 <th className="p-4 font-semibold text-right">KM Saat Ini</th>
                 <th className="p-4 font-semibold text-right">Service Default</th>
                 <th className="p-4 font-semibold text-center">Aksi</th>
@@ -203,9 +187,7 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
                       Truck {truck.size}
                     </span>
                   </td>
-                  <td className="p-4 text-gray-600 flex items-center gap-1">
-                    <Weight size={14} className="text-gray-400" /> {truck.tonnage} Ton
-                  </td>
+
                   <td className="p-4 text-right font-mono">{truck.currentOdometer.toLocaleString()}</td>
                   <td className="p-4 text-right text-gray-500">Every {truck.serviceIntervalKm.toLocaleString()} KM</td>
                   <td className="p-4 text-center">
@@ -221,7 +203,7 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
               ))}
               {filteredTrucks.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-gray-500">Data tidak ditemukan</td>
+                  <td colSpan={7} className="p-8 text-center text-gray-500">Data tidak ditemukan</td>
                 </tr>
               )}
             </tbody>
@@ -285,10 +267,6 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
                       <option value="Small">Small</option>
                       <option value="Big">Big</option>
                     </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Kapasitas (Ton)</label>
-                    <input type="number" required className="w-full border p-2 rounded" value={formData.tonnage || ''} onChange={e => setFormData({ ...formData, tonnage: parseInt(e.target.value) })} />
                   </div>
                 </div>
               </div>
