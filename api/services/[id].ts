@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { db } from '../../db';
+import { createDb } from '../../db';
 import { serviceRecords, spareParts } from '../../db/schema';
 import { eq } from 'drizzle-orm';
 
@@ -16,6 +16,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
+        const db = createDb();
+
         if (req.method === 'GET') {
             const [record] = await db.select().from(serviceRecords).where(eq(serviceRecords.id, id));
             if (!record) return res.status(404).json({ error: 'Service record not found' });

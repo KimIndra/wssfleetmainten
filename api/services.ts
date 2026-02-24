@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { db } from '../db';
+import { createDb } from '../db';
 import { serviceRecords, spareParts, trucks, serviceSchedules } from '../db/schema';
 import type { NewServiceRecord, NewSparePart } from '../db/schema';
 import { eq, desc } from 'drizzle-orm';
@@ -12,6 +12,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'OPTIONS') return res.status(200).end();
 
     try {
+        const db = createDb();
+
         if (req.method === 'GET') {
             const records = await db.select().from(serviceRecords).orderBy(desc(serviceRecords.serviceDate));
             const parts = await db.select().from(spareParts);
@@ -25,18 +27,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         if (req.method === 'POST') {
-            const body = req.body as {
-                id: string;
-                truckId: string;
-                serviceDate: string;
-                odometer: number;
-                serviceTypes: string[];
-                description: string;
-                parts?: Array<{ id: string; name: string; partNumber: string; price: number; quantity: number }>;
-                laborCost: number;
-                totalCost: number;
-                mechanic: string;
-            };
+            let body = req.body;
+            if (typeof body === 'string') {
+                try { body = JSON.parse(body); } catch { body = {}; }
+            }
+            body = body || {};
 
             const { id, truckId, serviceDate, odometer, serviceTypes, description, parts = [], laborCost, totalCost, mechanic } = body;
 
@@ -50,7 +45,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             // 2. Insert spare parts
             if (parts.length > 0) {
-                const newParts: NewSparePart[] = parts.map(p => ({ ...p, serviceRecordId: id }));
+                const newParts: NewSparePart[] = parts.map((p: any) => ({ ...p, serviceRecordId: id }));
                 await db.insert(spareParts).values(newParts);
             }
 
@@ -66,7 +61,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 // 4. Update matching schedules
                 const schedules = await db.select().from(serviceSchedules).where(eq(serviceSchedules.truckId, truckId));
                 for (const schedule of schedules) {
-                    const matched = serviceTypes.some(type =>
+                    const matched = serviceTypes.some((type: string) =>
                         type.toLowerCase() === schedule.serviceName.toLowerCase() ||
                         (type === 'Oil Change' && schedule.serviceName === 'Ganti Oli') ||
                         (type === 'Regular' && schedule.serviceName === 'Service Rutin')

@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { db } from '../db';
+import { createDb } from '../db';
 import { trucks, serviceSchedules, clients } from '../db/schema';
 import type { NewTruck, NewServiceSchedule } from '../db/schema';
 import { eq } from 'drizzle-orm';
@@ -12,6 +12,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'OPTIONS') return res.status(200).end();
 
     try {
+        const db = createDb();
+
         if (req.method === 'GET') {
             const allTrucks = await db.select().from(trucks).orderBy(trucks.brand);
             const allSchedules = await db.select().from(serviceSchedules);
@@ -27,22 +29,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         if (req.method === 'POST') {
-            const body = req.body as {
-                id: string;
-                plateNumber: string;
-                brand: string;
-                model: string;
-                year: number;
-                size: 'Small' | 'Big';
-                tonnage: number;
-                clientId: string;
-                currentOdometer?: number;
-                lastServiceDate?: string | null;
-                lastServiceOdometer?: number;
-                serviceIntervalKm?: number;
-                serviceIntervalMonths?: number;
-                schedules?: Array<{ id: string; serviceName: string; intervalKm: number; intervalMonths: number; lastServiceDate?: string; lastServiceOdometer?: number }>;
-            };
+            let body = req.body;
+            if (typeof body === 'string') {
+                try { body = JSON.parse(body); } catch { body = {}; }
+            }
+            body = body || {};
 
             const {
                 id, plateNumber, brand, model, year, size, tonnage, clientId,
@@ -66,7 +57,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const [created] = await db.insert(trucks).values(newTruck).returning();
 
             if (schedules.length > 0) {
-                const newSchedules: NewServiceSchedule[] = schedules.map(s => ({
+                const newSchedules: NewServiceSchedule[] = schedules.map((s: any) => ({
                     id: s.id,
                     truckId: id,
                     serviceName: s.serviceName,

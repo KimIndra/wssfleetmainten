@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { db } from '../../../db';
+import { createDb } from '../../../db';
 import { trucks } from '../../../db/schema';
 import { eq, sql } from 'drizzle-orm';
 
@@ -19,7 +19,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const body = req.body as { addedKm: number };
+    let body = req.body;
+    if (typeof body === 'string') {
+        try { body = JSON.parse(body); } catch { body = {}; }
+    }
+    body = body || {};
+
     const { addedKm } = body;
 
     if (typeof addedKm !== 'number' || addedKm < 0) {
@@ -27,6 +32,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
+        const db = createDb();
+
         const [updated] = await db
             .update(trucks)
             .set({ currentOdometer: sql<number>`${trucks.currentOdometer} + ${addedKm}` })

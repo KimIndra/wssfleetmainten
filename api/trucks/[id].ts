@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { db } from '../../db';
+import { createDb } from '../../db';
 import { serviceRecords, spareParts, trucks, serviceSchedules } from '../../db/schema';
 import type { NewServiceSchedule } from '../../db/schema';
 import { eq } from 'drizzle-orm';
@@ -17,6 +17,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
+        const db = createDb();
+
         if (req.method === 'GET') {
             const [truck] = await db.select().from(trucks).where(eq(trucks.id, id));
             if (!truck) return res.status(404).json({ error: 'Truck not found' });
@@ -26,21 +28,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         if (req.method === 'PUT') {
-            const body = req.body as {
-                plateNumber?: string;
-                brand?: string;
-                model?: string;
-                year?: number;
-                size?: 'Small' | 'Big';
-                tonnage?: number;
-                clientId?: string;
-                currentOdometer?: number;
-                lastServiceDate?: string | null;
-                lastServiceOdometer?: number;
-                serviceIntervalKm?: number;
-                serviceIntervalMonths?: number;
-                schedules?: Array<{ id: string; serviceName: string; intervalKm: number; intervalMonths: number; lastServiceDate?: string; lastServiceOdometer?: number }>;
-            };
+            let body = req.body;
+            if (typeof body === 'string') {
+                try { body = JSON.parse(body); } catch { body = {}; }
+            }
+            body = body || {};
 
             const {
                 plateNumber, brand, model, year, size, tonnage, clientId,
@@ -59,7 +51,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             if (schedules && Array.isArray(schedules)) {
                 await db.delete(serviceSchedules).where(eq(serviceSchedules.truckId, id));
                 if (schedules.length > 0) {
-                    const newSchedules: NewServiceSchedule[] = schedules.map(s => ({
+                    const newSchedules: NewServiceSchedule[] = schedules.map((s: any) => ({
                         id: s.id,
                         truckId: id,
                         serviceName: s.serviceName,
