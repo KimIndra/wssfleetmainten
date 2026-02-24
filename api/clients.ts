@@ -1,6 +1,13 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createDb } from '../db';
-import { clients } from '../db/schema';
+import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-http';
+import { clients } from './_schema';
+
+function getDb() {
+    const url = process.env.DATABASE_URL!;
+    const cleanUrl = url.replace(/[&?]channel_binding=[^&]*/g, '');
+    return drizzle(neon(cleanUrl));
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -10,7 +17,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'OPTIONS') return res.status(200).end();
 
     try {
-        const db = createDb();
+        const db = getDb();
 
         if (req.method === 'GET') {
             const all = await db.select().from(clients).orderBy(clients.name);
@@ -24,31 +31,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
             body = body || {};
 
-            const { name, contactPerson, phone } = body as {
-                name?: string;
-                contactPerson?: string;
-                phone?: string;
-            };
+            const { name, contactPerson, phone } = body;
 
             if (!name) return res.status(400).json({ error: 'Field "name" wajib diisi' });
             if (!contactPerson) return res.status(400).json({ error: 'Field "contactPerson" wajib diisi' });
             if (!phone) return res.status(400).json({ error: 'Field "phone" wajib diisi' });
 
             const id = `c-${Date.now()}`;
-            const result = await db.insert(clients).values({ id, name, contactPerson, phone }).returning();
-            const created = result[0];
-
-            if (!created) return res.status(500).json({ error: 'Insert berhasil tapi data tidak dikembalikan' });
-
+            const [created] = await db.insert(clients).values({ id, name, contactPerson, phone }).returning();
             return res.status(201).json(created);
         }
 
         return res.status(405).json({ error: 'Method not allowed' });
     } catch (err: any) {
-        console.error('[/api/clients] Error:', err);
-        return res.status(500).json({
-            error: err.message || err.code || String(err) || 'Internal server error',
-            code: err.code,
-        });
+        console.error('[/api/clients]', err);
+        return res.status(500).json({ error: err.message ?? 'Internal server error' });
     }
 }

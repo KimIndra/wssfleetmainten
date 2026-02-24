@@ -1,7 +1,14 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createDb } from '../../../db';
-import { trucks } from '../../../db/schema';
+import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-http';
+import { trucks } from '../../_schema';
 import { eq, sql } from 'drizzle-orm';
+
+function getDb() {
+    const url = process.env.DATABASE_URL!;
+    const cleanUrl = url.replace(/[&?]channel_binding=[^&]*/g, '');
+    return drizzle(neon(cleanUrl));
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -32,7 +39,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
-        const db = createDb();
+        const db = getDb();
 
         const [updated] = await db
             .update(trucks)

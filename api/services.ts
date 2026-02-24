@@ -1,8 +1,14 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createDb } from '../db';
-import { serviceRecords, spareParts, trucks, serviceSchedules } from '../db/schema';
-import type { NewServiceRecord, NewSparePart } from '../db/schema';
+import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-http';
+import { serviceRecords, spareParts, trucks, serviceSchedules } from './_schema';
 import { eq, desc } from 'drizzle-orm';
+
+function getDb() {
+    const url = process.env.DATABASE_URL!;
+    const cleanUrl = url.replace(/[&?]channel_binding=[^&]*/g, '');
+    return drizzle(neon(cleanUrl));
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -12,7 +18,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'OPTIONS') return res.status(200).end();
 
     try {
-        const db = createDb();
+        const db = getDb();
 
         if (req.method === 'GET') {
             const records = await db.select().from(serviceRecords).orderBy(desc(serviceRecords.serviceDate));
@@ -39,17 +45,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 return res.status(400).json({ error: 'Missing required service record fields' });
             }
 
-            // 1. Insert service record
-            const newRecord: NewServiceRecord = { id, truckId, serviceDate, odometer, serviceTypes, description, laborCost, totalCost, mechanic };
-            const [created] = await db.insert(serviceRecords).values(newRecord).returning();
+            const [created] = await db.insert(serviceRecords).values({
+                id, truckId, serviceDate, odometer, serviceTypes, description, laborCost, totalCost, mechanic
+            }).returning();
 
-            // 2. Insert spare parts
             if (parts.length > 0) {
-                const newParts: NewSparePart[] = parts.map((p: any) => ({ ...p, serviceRecordId: id }));
+                const newParts = parts.map((p: any) => ({ ...p, serviceRecordId: id }));
                 await db.insert(spareParts).values(newParts);
             }
 
-            // 3. Update truck: lastServiceDate, lastServiceOdometer, currentOdometer
             const [truck] = await db.select().from(trucks).where(eq(trucks.id, truckId));
             if (truck) {
                 await db.update(trucks).set({
@@ -58,13 +62,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     currentOdometer: Math.max(truck.currentOdometer, odometer),
                 }).where(eq(trucks.id, truckId));
 
-                // 4. Update matching schedules
                 const schedules = await db.select().from(serviceSchedules).where(eq(serviceSchedules.truckId, truckId));
                 for (const schedule of schedules) {
                     const matched = serviceTypes.some((type: string) =>
-                        type.toLowerCase() === schedule.serviceName.toLowerCase() ||
-                        (type === 'Oil Change' && schedule.serviceName === 'Ganti Oli') ||
-                        (type === 'Regular' && schedule.serviceName === 'Service Rutin')
+                        type.toLowerCase() === schedule.serviceName.toLowerCase()
                     );
                     if (matched) {
                         await db.update(serviceSchedules).set({

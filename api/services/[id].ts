@@ -1,7 +1,14 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createDb } from '../../db';
-import { serviceRecords, spareParts } from '../../db/schema';
+import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-http';
+import { serviceRecords, spareParts } from '../_schema';
 import { eq } from 'drizzle-orm';
+
+function getDb() {
+    const url = process.env.DATABASE_URL!;
+    const cleanUrl = url.replace(/[&?]channel_binding=[^&]*/g, '');
+    return drizzle(neon(cleanUrl));
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -16,7 +23,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
-        const db = createDb();
+        const db = getDb();
 
         if (req.method === 'GET') {
             const [record] = await db.select().from(serviceRecords).where(eq(serviceRecords.id, id));

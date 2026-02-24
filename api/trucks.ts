@@ -1,8 +1,14 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createDb } from '../db';
-import { trucks, serviceSchedules, clients } from '../db/schema';
-import type { NewTruck, NewServiceSchedule } from '../db/schema';
+import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-http';
+import { trucks, serviceSchedules, clients } from './_schema';
 import { eq } from 'drizzle-orm';
+
+function getDb() {
+    const url = process.env.DATABASE_URL!;
+    const cleanUrl = url.replace(/[&?]channel_binding=[^&]*/g, '');
+    return drizzle(neon(cleanUrl));
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -12,7 +18,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'OPTIONS') return res.status(200).end();
 
     try {
-        const db = createDb();
+        const db = getDb();
 
         if (req.method === 'GET') {
             const allTrucks = await db.select().from(trucks).orderBy(trucks.brand);
@@ -45,19 +51,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 return res.status(400).json({ error: 'Missing required truck fields' });
             }
 
-            const newTruck: NewTruck = {
+            const [created] = await db.insert(trucks).values({
                 id, plateNumber, brand, model, year, size, tonnage, clientId,
                 currentOdometer: currentOdometer ?? 0,
                 lastServiceDate: lastServiceDate ?? null,
                 lastServiceOdometer: lastServiceOdometer ?? 0,
                 serviceIntervalKm: serviceIntervalKm ?? 10000,
                 serviceIntervalMonths: serviceIntervalMonths ?? 6,
-            };
-
-            const [created] = await db.insert(trucks).values(newTruck).returning();
+            }).returning();
 
             if (schedules.length > 0) {
-                const newSchedules: NewServiceSchedule[] = schedules.map((s: any) => ({
+                const newSchedules = schedules.map((s: any) => ({
                     id: s.id,
                     truckId: id,
                     serviceName: s.serviceName,
