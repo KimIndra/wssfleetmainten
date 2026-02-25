@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ServiceRecord, Truck, SparePart } from '../types';
 import { formatCurrency } from '../utils';
-import { Plus, Trash, Save, Wrench, Check, CheckCircle } from 'lucide-react';
+import { Plus, Trash, Save, Wrench, Check, CheckCircle, Search, X } from 'lucide-react';
 
 interface InputServiceProps {
     trucks: Truck[];
@@ -27,6 +27,29 @@ const InputService: React.FC<InputServiceProps> = ({ trucks, onAddService }) => 
     ]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
+
+    // Search suggestion state
+    const [truckSearch, setTruckSearch] = useState('');
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const suggestionsRef = useRef<HTMLDivElement>(null);
+
+    // Close suggestions on outside click
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (suggestionsRef.current && !suggestionsRef.current.contains(e.target as Node)) {
+                setShowSuggestions(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    // Filtered trucks for suggestion
+    const filteredTrucks = trucks.filter(t =>
+        t.plateNumber.toLowerCase().includes(truckSearch.toLowerCase()) ||
+        t.brand.toLowerCase().includes(truckSearch.toLowerCase()) ||
+        t.model.toLowerCase().includes(truckSearch.toLowerCase())
+    );
 
     // Auto-fill odometer
     useEffect(() => {
@@ -65,6 +88,7 @@ const InputService: React.FC<InputServiceProps> = ({ trucks, onAddService }) => 
 
     const resetForm = () => {
         setFormTruckId('');
+        setTruckSearch('');
         setFormDate(new Date().toISOString().split('T')[0]);
         setFormOdo(0);
         setFormSelectedTypes([]);
@@ -141,19 +165,59 @@ const InputService: React.FC<InputServiceProps> = ({ trucks, onAddService }) => 
                 <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
                     <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Informasi Utama</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Pilih Armada *</label>
-                            <select
-                                required
-                                className="w-full border p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                value={formTruckId}
-                                onChange={e => setFormTruckId(e.target.value)}
-                            >
-                                <option value="">-- Pilih Truck --</option>
-                                {trucks.map(t => (
-                                    <option key={t.id} value={t.id}>{t.plateNumber} - {t.brand} {t.model}</option>
-                                ))}
-                            </select>
+                        <div className="relative" ref={suggestionsRef}>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Cari Armada (No Polisi) *</label>
+                            <div className="relative">
+                                <Search className="absolute left-3 top-3 text-gray-400" size={16} />
+                                <input
+                                    type="text"
+                                    placeholder="Ketik no polisi..."
+                                    className="w-full border p-2.5 pl-9 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                    value={truckSearch}
+                                    onChange={e => {
+                                        setTruckSearch(e.target.value);
+                                        setShowSuggestions(true);
+                                        if (!e.target.value) setFormTruckId('');
+                                    }}
+                                    onFocus={() => setShowSuggestions(true)}
+                                />
+                                {formTruckId && (
+                                    <button
+                                        type="button"
+                                        className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                                        onClick={() => { setFormTruckId(''); setTruckSearch(''); }}
+                                    >
+                                        <X size={16} />
+                                    </button>
+                                )}
+                            </div>
+                            {showSuggestions && truckSearch && (
+                                <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                    {filteredTrucks.length > 0 ? filteredTrucks.map(t => (
+                                        <button
+                                            key={t.id}
+                                            type="button"
+                                            className={`w-full text-left px-4 py-2.5 hover:bg-blue-50 flex justify-between items-center transition-colors ${formTruckId === t.id ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-700'
+                                                }`}
+                                            onClick={() => {
+                                                setFormTruckId(t.id);
+                                                setTruckSearch(`${t.plateNumber} - ${t.brand} ${t.model}`);
+                                                setShowSuggestions(false);
+                                            }}
+                                        >
+                                            <span className="font-medium">{t.plateNumber}</span>
+                                            <span className="text-xs text-gray-400">{t.brand} {t.model}</span>
+                                        </button>
+                                    )) : (
+                                        <div className="px-4 py-3 text-sm text-gray-400 italic">Tidak ada armada ditemukan</div>
+                                    )}
+                                </div>
+                            )}
+                            {selectedTruck && (
+                                <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                                    <CheckCircle size={12} /> Terpilih: {selectedTruck.plateNumber} — {selectedTruck.brand} {selectedTruck.model} ({selectedTruck.size})
+                                </p>
+                            )}
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Tanggal Service *</label>
