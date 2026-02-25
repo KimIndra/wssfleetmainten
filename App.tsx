@@ -73,6 +73,25 @@ const App: React.FC = () => {
     setClients(prev => [...prev, created]);
   };
 
+  const handleDeleteTruck = async (truckId: string): Promise<void> => {
+    await api.trucks.delete(truckId);
+    setTrucks(prev => prev.filter(t => t.id !== truckId));
+    setServices(prev => prev.filter(s => s.truckId !== truckId));
+  };
+
+  const handleDeleteClient = async (clientId: string): Promise<void> => {
+    await api.clients.delete(clientId);
+    setClients(prev => prev.filter(c => c.id !== clientId));
+  };
+
+  const handleDeleteService = async (serviceId: string): Promise<void> => {
+    await api.services.delete(serviceId);
+    setServices(prev => prev.filter(s => s.id !== serviceId));
+    // Refresh trucks to get updated data
+    const updatedTrucks = await api.trucks.list();
+    setTrucks(updatedTrucks);
+  };
+
   // ── Render ─────────────────────────────────────────────────
   if (loading) {
     return (
@@ -116,6 +135,7 @@ const App: React.FC = () => {
             clients={clients}
             onAddTruck={handleAddTruck}
             onEditTruck={handleEditTruck}
+            onDeleteTruck={handleDeleteTruck}
           />
         );
       case 'history':
@@ -124,6 +144,7 @@ const App: React.FC = () => {
             services={services}
             trucks={trucks}
             onAddService={handleAddService}
+            onDeleteService={handleDeleteService}
           />
         );
       case 'reports':
@@ -133,6 +154,7 @@ const App: React.FC = () => {
           <ClientManagement
             clients={clients}
             onAddClient={handleAddClient}
+            onDeleteClient={handleDeleteClient}
           />
         );
       default:

@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import { pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import { eq } from 'drizzle-orm';
 
 const clientsTable = pgTable('clients', {
     id: text('id').primaryKey(),
@@ -18,7 +19,7 @@ function getDb() {
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
     if (req.method === 'OPTIONS') return res.status(200).end();
@@ -44,6 +45,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const id = `c-${Date.now()}`;
             const [created] = await db.insert(clientsTable).values({ id, name, contactPerson, phone }).returning();
             return res.status(201).json(created);
+        }
+
+        if (req.method === 'DELETE') {
+            let body = req.body;
+            if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
+            body = body || {};
+            const { id } = body;
+            if (!id) return res.status(400).json({ error: 'Field "id" wajib diisi' });
+
+            await db.delete(clientsTable).where(eq(clientsTable.id, id));
+            return res.status(200).json({ success: true });
         }
 
         return res.status(405).json({ error: 'Method not allowed' });

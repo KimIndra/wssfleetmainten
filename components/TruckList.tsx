@@ -7,9 +7,10 @@ interface TruckListProps {
   clients: Client[];
   onAddTruck: (truck: Truck) => Promise<void>;
   onEditTruck: (truck: Truck) => Promise<void>;
+  onDeleteTruck?: (truckId: string) => Promise<void>;
 }
 
-const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEditTruck }) => {
+const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEditTruck, onDeleteTruck }) => {
   // Helper: badge status berdasarkan tanggal expiry
   const getExpiryBadge = (dateStr?: string | null) => {
     if (!dateStr) return <span className="text-xs text-gray-400 italic">Belum diisi</span>;
@@ -125,6 +126,16 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
     }
   };
 
+  const handleDeleteTruck = async (truck: Truck) => {
+    if (!onDeleteTruck) return;
+    if (!window.confirm(`Hapus truk ${truck.plateNumber} (${truck.brand} ${truck.model})? Semua data service terkait juga akan dihapus.`)) return;
+    try {
+      await onDeleteTruck(truck.id);
+    } catch (err: any) {
+      alert('Gagal menghapus: ' + (err.message ?? 'Terjadi kesalahan'));
+    }
+  };
+
   return (
     <div className="p-6">
       <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
@@ -209,11 +220,20 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
                   <td className="p-4 text-center">
                     <button
                       onClick={() => handleOpenEdit(truck)}
-                      className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center justify-center gap-1 mx-auto"
+                      className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center justify-center gap-1"
                       title="Edit / Atur Jadwal"
                     >
                       <Settings size={16} /> <span className="text-xs">Atur</span>
                     </button>
+                    {onDeleteTruck && (
+                      <button
+                        onClick={() => handleDeleteTruck(truck)}
+                        className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center justify-center gap-1"
+                        title="Hapus Truk"
+                      >
+                        <Trash size={16} /> <span className="text-xs">Hapus</span>
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

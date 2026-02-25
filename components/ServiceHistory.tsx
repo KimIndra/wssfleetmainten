@@ -8,36 +8,37 @@ interface ServiceHistoryProps {
   services: ServiceRecord[];
   trucks: Truck[];
   onAddService: (service: ServiceRecord) => void;
+  onDeleteService?: (serviceId: string) => Promise<void>;
 }
 
 // Available Categories for selection
 const SERVICE_CATEGORIES = [
-  'Regular', 'Oil Change', 'Tune Up', 'Brake System', 
-  'Tire Change', 'Major', 'Engine Repair', 'Electrical', 
+  'Regular', 'Oil Change', 'Tune Up', 'Brake System',
+  'Tire Change', 'Major', 'Engine Repair', 'Electrical',
   'Suspension', 'Body Repair', 'Other'
 ];
 
-const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onAddService }) => {
+const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onAddService, onDeleteService }) => {
   const [filterType, setFilterType] = useState('all');
   const [filterMonth, setFilterMonth] = useState('all');
   const [filterYear, setFilterYear] = useState('all');
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
-  
+
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
+
   // Form State
   const [formTruckId, setFormTruckId] = useState('');
   const [formDate, setFormDate] = useState(new Date().toISOString().split('T')[0]);
   const [formOdo, setFormOdo] = useState<number>(0);
-  
+
   // Changed to Array for Multi-select
   const [formSelectedTypes, setFormSelectedTypes] = useState<string[]>([]);
-  
+
   const [formMechanic, setFormMechanic] = useState('');
   const [formDescription, setFormDescription] = useState('');
   const [formLaborCost, setFormLaborCost] = useState<number>(0);
-  
+
   // Dynamic Parts State
   const [formParts, setFormParts] = useState<Partial<SparePart>[]>([
     { id: Date.now().toString(), name: '', partNumber: '', quantity: 1, price: 0 }
@@ -104,7 +105,7 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onAdd
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validation
     if (formSelectedTypes.length === 0) {
       alert("Mohon pilih setidaknya satu jenis service.");
@@ -112,7 +113,7 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onAdd
     }
 
     const validParts = formParts.filter(p => p.name && p.price);
-    
+
     const newService: ServiceRecord = {
       id: `srv-${Date.now()}`,
       truckId: formTruckId,
@@ -128,7 +129,7 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onAdd
 
     onAddService(newService);
     setIsModalOpen(false);
-    
+
     // Reset Form
     setFormTruckId('');
     setFormDescription('');
@@ -141,6 +142,17 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onAdd
     setFormSelectedTypes(['Regular']); // Default selection
     setIsModalOpen(true);
   }
+
+  const handleDeleteService = async (service: ServiceRecord) => {
+    if (!onDeleteService) return;
+    const truck = trucks.find(t => t.id === service.truckId);
+    if (!window.confirm(`Hapus data service tanggal ${service.serviceDate} untuk ${truck?.plateNumber ?? 'truk'}?`)) return;
+    try {
+      await onDeleteService(service.id);
+    } catch (err: any) {
+      alert('Gagal menghapus: ' + (err.message ?? 'Terjadi kesalahan'));
+    }
+  };
 
   const handleExport = () => {
     const dataToExport = filteredServices.map(s => {
@@ -171,13 +183,13 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onAdd
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Riwayat Service & Pembayaran</h1>
         <div className="flex gap-2">
-          <button 
+          <button
             onClick={handleExport}
             className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm"
           >
             <Download size={18} /> Export Data
           </button>
-          <button 
+          <button
             onClick={handleOpenModal}
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm"
           >
@@ -188,147 +200,157 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onAdd
 
       <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="flex flex-col">
-            <label className="text-xs text-gray-500 mb-1">Filter Kategori</label>
-            <select 
-              className="border border-gray-300 rounded-lg py-2 px-3 outline-none"
-              value={filterType}
-              onChange={e => setFilterType(e.target.value)}
-            >
-              <option value="all">Semua Jenis Service</option>
-              {SERVICE_CATEGORIES.map(type => (
-                <option key={type} value={type}>{type}</option>
-              ))}
-            </select>
+          <label className="text-xs text-gray-500 mb-1">Filter Kategori</label>
+          <select
+            className="border border-gray-300 rounded-lg py-2 px-3 outline-none"
+            value={filterType}
+            onChange={e => setFilterType(e.target.value)}
+          >
+            <option value="all">Semua Jenis Service</option>
+            {SERVICE_CATEGORIES.map(type => (
+              <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
         </div>
 
         <div className="flex flex-col">
-            <label className="text-xs text-gray-500 mb-1">Filter Bulan</label>
-            <select 
-              className="border border-gray-300 rounded-lg py-2 px-3 outline-none"
-              value={filterMonth}
-              onChange={e => setFilterMonth(e.target.value)}
-            >
-              <option value="all">Semua Bulan</option>
-              <option value="1">Januari</option>
-              <option value="2">Februari</option>
-              <option value="3">Maret</option>
-              <option value="4">April</option>
-              <option value="5">Mei</option>
-              <option value="6">Juni</option>
-              <option value="7">Juli</option>
-              <option value="8">Agustus</option>
-              <option value="9">September</option>
-              <option value="10">Oktober</option>
-              <option value="11">November</option>
-              <option value="12">Desember</option>
-            </select>
+          <label className="text-xs text-gray-500 mb-1">Filter Bulan</label>
+          <select
+            className="border border-gray-300 rounded-lg py-2 px-3 outline-none"
+            value={filterMonth}
+            onChange={e => setFilterMonth(e.target.value)}
+          >
+            <option value="all">Semua Bulan</option>
+            <option value="1">Januari</option>
+            <option value="2">Februari</option>
+            <option value="3">Maret</option>
+            <option value="4">April</option>
+            <option value="5">Mei</option>
+            <option value="6">Juni</option>
+            <option value="7">Juli</option>
+            <option value="8">Agustus</option>
+            <option value="9">September</option>
+            <option value="10">Oktober</option>
+            <option value="11">November</option>
+            <option value="12">Desember</option>
+          </select>
         </div>
 
         <div className="flex flex-col">
-            <label className="text-xs text-gray-500 mb-1">Filter Tahun</label>
-            <select 
-              className="border border-gray-300 rounded-lg py-2 px-3 outline-none"
-              value={filterYear}
-              onChange={e => setFilterYear(e.target.value)}
-            >
-              <option value="all">Semua Tahun</option>
-              {years.map(y => <option key={y} value={y}>{y}</option>)}
-            </select>
+          <label className="text-xs text-gray-500 mb-1">Filter Tahun</label>
+          <select
+            className="border border-gray-300 rounded-lg py-2 px-3 outline-none"
+            value={filterYear}
+            onChange={e => setFilterYear(e.target.value)}
+          >
+            <option value="all">Semua Tahun</option>
+            {years.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
         </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="overflow-x-auto">
-           <table className="w-full text-left text-sm">
-             <thead className="bg-slate-50 text-slate-600 border-b border-slate-200">
-               <tr>
-                 <th className="p-4 w-10"></th>
-                 <th className="p-4 font-semibold">Tanggal</th>
-                 <th className="p-4 font-semibold">Truk</th>
-                 <th className="p-4 font-semibold">Jenis Service</th>
-                 <th className="p-4 font-semibold">Mekanik</th>
-                 <th className="p-4 font-semibold text-right">Total Biaya</th>
-               </tr>
-             </thead>
-             <tbody>
-               {filteredServices.map(service => {
-                 const truck = trucks.find(t => t.id === service.truckId);
-                 const isExpanded = expandedRow === service.id;
+          <table className="w-full text-left text-sm">
+            <thead className="bg-slate-50 text-slate-600 border-b border-slate-200">
+              <tr>
+                <th className="p-4 w-10"></th>
+                <th className="p-4 font-semibold">Tanggal</th>
+                <th className="p-4 font-semibold">Truk</th>
+                <th className="p-4 font-semibold">Jenis Service</th>
+                <th className="p-4 font-semibold">Mekanik</th>
+                <th className="p-4 font-semibold text-right">Total Biaya</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredServices.map(service => {
+                const truck = trucks.find(t => t.id === service.truckId);
+                const isExpanded = expandedRow === service.id;
 
-                 return (
-                   <React.Fragment key={service.id}>
-                     <tr 
-                      className="border-b border-slate-100 hover:bg-slate-50 cursor-pointer" 
+                return (
+                  <React.Fragment key={service.id}>
+                    <tr
+                      className="border-b border-slate-100 hover:bg-slate-50 cursor-pointer"
                       onClick={() => toggleExpand(service.id)}
-                     >
-                       <td className="p-4 text-gray-400">
-                         {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                       </td>
-                       <td className="p-4 text-gray-800">{formatDate(service.serviceDate)}</td>
-                       <td className="p-4 font-medium text-gray-800">{truck?.plateNumber || '-'}</td>
-                       <td className="p-4">
-                         <div className="flex flex-wrap gap-1">
-                           {service.serviceTypes.map((type, idx) => (
-                             <span key={idx} className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs whitespace-nowrap">
-                               {type}
-                             </span>
-                           ))}
-                         </div>
-                       </td>
-                       <td className="p-4 text-gray-600">{service.mechanic}</td>
-                       <td className="p-4 text-right font-bold text-gray-800">{formatCurrency(service.totalCost)}</td>
-                     </tr>
-                     {isExpanded && (
-                       <tr className="bg-slate-50 border-b border-slate-200">
-                         <td colSpan={6} className="p-4">
-                           <div className="bg-white rounded border border-slate-200 p-4">
-                              <h4 className="font-semibold text-gray-700 mb-3 border-b pb-2">Detail Pembayaran & Suku Cadang</h4>
-                              <p className="text-gray-600 mb-3 text-sm italic">{service.description}</p>
-                              <table className="w-full text-sm mb-3">
-                                <thead className="text-gray-500 bg-gray-50">
-                                  <tr>
-                                    <th className="p-2 text-left">Nama Part</th>
-                                    <th className="p-2 text-left">Kode Part</th>
-                                    <th className="p-2 text-center">Qty</th>
-                                    <th className="p-2 text-right">Harga Satuan</th>
-                                    <th className="p-2 text-right">Subtotal</th>
+                    >
+                      <td className="p-4 text-gray-400">
+                        {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                      </td>
+                      <td className="p-4 text-gray-800">{formatDate(service.serviceDate)}</td>
+                      <td className="p-4 font-medium text-gray-800">{truck?.plateNumber || '-'}</td>
+                      <td className="p-4">
+                        <div className="flex flex-wrap gap-1">
+                          {service.serviceTypes.map((type, idx) => (
+                            <span key={idx} className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs whitespace-nowrap">
+                              {type}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="p-4 text-gray-600">{service.mechanic}</td>
+                      <td className="p-4 text-right font-bold text-gray-800">{formatCurrency(service.totalCost)}</td>
+                    </tr>
+                    {isExpanded && (
+                      <tr className="bg-slate-50 border-b border-slate-200">
+                        <td colSpan={6} className="p-4">
+                          <div className="bg-white rounded border border-slate-200 p-4">
+                            <h4 className="font-semibold text-gray-700 mb-3 border-b pb-2">Detail Pembayaran & Suku Cadang</h4>
+                            <p className="text-gray-600 mb-3 text-sm italic">{service.description}</p>
+                            <table className="w-full text-sm mb-3">
+                              <thead className="text-gray-500 bg-gray-50">
+                                <tr>
+                                  <th className="p-2 text-left">Nama Part</th>
+                                  <th className="p-2 text-left">Kode Part</th>
+                                  <th className="p-2 text-center">Qty</th>
+                                  <th className="p-2 text-right">Harga Satuan</th>
+                                  <th className="p-2 text-right">Subtotal</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {service.parts.map(part => (
+                                  <tr key={part.id} className="border-b border-gray-100">
+                                    <td className="p-2">{part.name}</td>
+                                    <td className="p-2 text-gray-500">{part.partNumber}</td>
+                                    <td className="p-2 text-center">{part.quantity}</td>
+                                    <td className="p-2 text-right">{formatCurrency(part.price)}</td>
+                                    <td className="p-2 text-right">{formatCurrency(part.price * part.quantity)}</td>
                                   </tr>
-                                </thead>
-                                <tbody>
-                                  {service.parts.map(part => (
-                                    <tr key={part.id} className="border-b border-gray-100">
-                                      <td className="p-2">{part.name}</td>
-                                      <td className="p-2 text-gray-500">{part.partNumber}</td>
-                                      <td className="p-2 text-center">{part.quantity}</td>
-                                      <td className="p-2 text-right">{formatCurrency(part.price)}</td>
-                                      <td className="p-2 text-right">{formatCurrency(part.price * part.quantity)}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                              <div className="flex justify-end space-y-1 flex-col items-end border-t pt-3">
-                                <div className="flex w-64 justify-between text-gray-600">
-                                  <span>Total Parts:</span>
-                                  <span>{formatCurrency(service.parts.reduce((sum, p) => sum + (p.price * p.quantity), 0))}</span>
-                                </div>
-                                <div className="flex w-64 justify-between text-gray-600">
-                                  <span>Jasa Mekanik:</span>
-                                  <span>{formatCurrency(service.laborCost)}</span>
-                                </div>
-                                <div className="flex w-64 justify-between font-bold text-lg text-gray-800 mt-2 border-t border-dashed pt-2">
-                                  <span>Total:</span>
-                                  <span>{formatCurrency(service.totalCost)}</span>
-                                </div>
+                                ))}
+                              </tbody>
+                            </table>
+                            <div className="flex justify-end space-y-1 flex-col items-end border-t pt-3">
+                              <div className="flex w-64 justify-between text-gray-600">
+                                <span>Total Parts:</span>
+                                <span>{formatCurrency(service.parts.reduce((sum, p) => sum + (p.price * p.quantity), 0))}</span>
                               </div>
-                           </div>
-                         </td>
-                       </tr>
-                     )}
-                   </React.Fragment>
-                 );
-               })}
-             </tbody>
-           </table>
+                              <div className="flex w-64 justify-between text-gray-600">
+                                <span>Jasa Mekanik:</span>
+                                <span>{formatCurrency(service.laborCost)}</span>
+                              </div>
+                              <div className="flex w-64 justify-between font-bold text-lg text-gray-800 mt-2 border-t border-dashed pt-2">
+                                <span>Total:</span>
+                                <span>{formatCurrency(service.totalCost)}</span>
+                              </div>
+                            </div>
+                            {onDeleteService && (
+                              <div className="mt-4 pt-3 border-t border-gray-200 flex justify-end">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteService(service); }}
+                                  className="flex items-center gap-1 px-3 py-1.5 text-sm text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                                >
+                                  <Trash size={14} /> Hapus Data Service Ini
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -342,15 +364,15 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onAdd
               </h2>
               <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 font-bold text-xl">&times;</button>
             </div>
-            
+
             <form onSubmit={handleSubmit} className="p-6 space-y-6 flex-1 overflow-y-auto">
-              
+
               {/* Section 1: Informasi Utama */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Pilih Armada</label>
-                  <select 
-                    required 
+                  <select
+                    required
                     className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
                     value={formTruckId}
                     onChange={e => setFormTruckId(e.target.value)}
@@ -362,30 +384,30 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onAdd
                   </select>
                 </div>
                 <div>
-                   <label className="block text-sm font-medium text-gray-700 mb-1">Tanggal Service</label>
-                   <input 
-                      type="date" 
-                      required 
-                      className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                      value={formDate}
-                      onChange={e => setFormDate(e.target.value)}
-                   />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tanggal Service</label>
+                  <input
+                    type="date"
+                    required
+                    className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                    value={formDate}
+                    onChange={e => setFormDate(e.target.value)}
+                  />
                 </div>
                 <div>
-                   <label className="block text-sm font-medium text-gray-700 mb-1">Odometer (KM)</label>
-                   <input 
-                      type="number" 
-                      required 
-                      className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                      value={formOdo}
-                      onChange={e => setFormOdo(parseInt(e.target.value))}
-                   />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Odometer (KM)</label>
+                  <input
+                    type="number"
+                    required
+                    className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                    value={formOdo}
+                    onChange={e => setFormOdo(parseInt(e.target.value))}
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Nama Mekanik / Bengkel</label>
-                  <input 
-                    type="text" 
-                    required 
+                  <input
+                    type="text"
+                    required
                     placeholder="Contoh: Pak Budi / Bengkel Resmi"
                     className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
                     value={formMechanic}
@@ -403,8 +425,8 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onAdd
                           type="button"
                           onClick={() => toggleServiceType(type)}
                           className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors flex items-center gap-1
-                            ${isSelected 
-                              ? 'bg-blue-600 text-white border-blue-600' 
+                            ${isSelected
+                              ? 'bg-blue-600 text-white border-blue-600'
                               : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-100'}`}
                         >
                           {isSelected && <Check size={14} />}
@@ -415,14 +437,14 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onAdd
                   </div>
                 </div>
                 <div className="md:col-span-2">
-                   <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi / Keluhan</label>
-                   <textarea 
-                      className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                      rows={2}
-                      placeholder="Catatan detail pekerjaan..."
-                      value={formDescription}
-                      onChange={e => setFormDescription(e.target.value)}
-                   />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi / Keluhan</label>
+                  <textarea
+                    className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                    rows={2}
+                    placeholder="Catatan detail pekerjaan..."
+                    value={formDescription}
+                    onChange={e => setFormDescription(e.target.value)}
+                  />
                 </div>
               </div>
 
@@ -432,22 +454,22 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onAdd
               <div>
                 <div className="flex justify-between items-center mb-3">
                   <h3 className="text-lg font-semibold text-gray-700">Suku Cadang & Material</h3>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     onClick={handleAddPart}
                     className="text-sm bg-blue-50 text-blue-600 px-3 py-1 rounded hover:bg-blue-100 flex items-center"
                   >
                     <Plus size={14} className="mr-1" /> Tambah Baris
                   </button>
                 </div>
-                
+
                 <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-3">
                   {formParts.map((part, index) => (
                     <div key={index} className="flex flex-col md:flex-row gap-2 items-end">
                       <div className="flex-grow">
                         <label className="text-xs text-gray-500 block mb-1">Nama Part</label>
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           placeholder="Nama barang"
                           className="w-full border p-2 rounded text-sm"
                           value={part.name}
@@ -456,8 +478,8 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onAdd
                       </div>
                       <div className="w-full md:w-32">
                         <label className="text-xs text-gray-500 block mb-1">Kode Part</label>
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           placeholder="Optional"
                           className="w-full border p-2 rounded text-sm"
                           value={part.partNumber}
@@ -466,8 +488,8 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onAdd
                       </div>
                       <div className="w-24">
                         <label className="text-xs text-gray-500 block mb-1">Qty</label>
-                        <input 
-                          type="number" 
+                        <input
+                          type="number"
                           min="1"
                           className="w-full border p-2 rounded text-sm text-center"
                           value={part.quantity}
@@ -476,8 +498,8 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onAdd
                       </div>
                       <div className="w-full md:w-40">
                         <label className="text-xs text-gray-500 block mb-1">Harga Satuan</label>
-                        <input 
-                          type="number" 
+                        <input
+                          type="number"
                           min="0"
                           className="w-full border p-2 rounded text-sm text-right"
                           value={part.price}
@@ -485,10 +507,10 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onAdd
                         />
                       </div>
                       <div className="w-full md:w-40 text-right pb-2 font-mono text-sm text-gray-600 bg-white p-2 border rounded">
-                         {formatCurrency((part.price || 0) * (part.quantity || 0))}
+                        {formatCurrency((part.price || 0) * (part.quantity || 0))}
                       </div>
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         onClick={() => handleRemovePart(index)}
                         className="p-2 text-red-500 hover:bg-red-50 rounded"
                         disabled={formParts.length === 1}
@@ -497,9 +519,9 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onAdd
                       </button>
                     </div>
                   ))}
-                  
+
                   <div className="flex justify-end pt-2 text-sm text-gray-600">
-                     <span>Subtotal Parts: <b>{formatCurrency(formParts.reduce((sum, part) => sum + ((part.price || 0) * (part.quantity || 0)), 0))}</b></span>
+                    <span>Subtotal Parts: <b>{formatCurrency(formParts.reduce((sum, part) => sum + ((part.price || 0) * (part.quantity || 0)), 0))}</b></span>
                   </div>
                 </div>
               </div>
@@ -509,8 +531,8 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onAdd
                 <div className="flex flex-col md:flex-row justify-end items-center gap-4">
                   <div className="w-full md:w-64">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Biaya Jasa Mekanik</label>
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       min="0"
                       className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 text-right font-semibold"
                       value={formLaborCost}
@@ -519,27 +541,27 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onAdd
                   </div>
                 </div>
                 <div className="mt-4 flex justify-between items-center border-t border-blue-200 pt-4">
-                   <span className="text-lg font-bold text-gray-700">Total Biaya Service</span>
-                   <span className="text-2xl font-bold text-blue-700">{formatCurrency(calculateTotalCost())}</span>
+                  <span className="text-lg font-bold text-gray-700">Total Biaya Service</span>
+                  <span className="text-2xl font-bold text-blue-700">{formatCurrency(calculateTotalCost())}</span>
                 </div>
               </div>
 
             </form>
-            
+
             <div className="p-6 border-t border-gray-100 flex justify-end gap-3 bg-white sticky bottom-0">
-               <button 
-                 type="button" 
-                 onClick={() => setIsModalOpen(false)}
-                 className="px-6 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium"
-               >
-                 Batal
-               </button>
-               <button 
-                 onClick={handleSubmit}
-                 className="px-6 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 flex items-center gap-2 font-medium"
-               >
-                 <Save size={18} /> Simpan Data Service
-               </button>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="px-6 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleSubmit}
+                className="px-6 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 flex items-center gap-2 font-medium"
+              >
+                <Save size={18} /> Simpan Data Service
+              </button>
             </div>
           </div>
         </div>
