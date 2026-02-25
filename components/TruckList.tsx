@@ -330,6 +330,16 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
                   </div>
                 </div>
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi / Keterangan</label>
+                <textarea
+                  className="w-full border p-2 rounded"
+                  rows={2}
+                  placeholder="Catatan tambahan tentang truk..."
+                  value={formData.description || ''}
+                  onChange={e => setFormData({ ...formData, description: e.target.value })}
+                />
+              </div>
 
               {/* Dokumen Kendaraan */}
               <div className="space-y-4">
