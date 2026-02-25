@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Truck, Client, ServiceSchedule } from '../types';
-import { Search, Plus, Pencil, Trash, Calendar, Settings } from 'lucide-react';
+import { Search, Plus, Pencil, Trash, Calendar, Settings, FileText } from 'lucide-react';
 
 interface TruckListProps {
   trucks: Truck[];
@@ -10,6 +10,16 @@ interface TruckListProps {
 }
 
 const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEditTruck }) => {
+  // Helper: badge status berdasarkan tanggal expiry
+  const getExpiryBadge = (dateStr?: string | null) => {
+    if (!dateStr) return <span className="text-xs text-gray-400 italic">Belum diisi</span>;
+    const today = new Date();
+    const expiry = new Date(dateStr);
+    const diffDays = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays < 0) return <span className="px-2 py-0.5 rounded text-xs bg-red-100 text-red-700 font-semibold">Expired</span>;
+    if (diffDays <= 30) return <span className="px-2 py-0.5 rounded text-xs bg-yellow-100 text-yellow-700 font-semibold">{diffDays} hari lagi</span>;
+    return <span className="px-2 py-0.5 rounded text-xs bg-green-100 text-green-700">{dateStr}</span>;
+  };
   const [filterClient, setFilterClient] = useState<string>('all');
   const [filterSize, setFilterSize] = useState<string>('all');
 
@@ -172,6 +182,9 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
                 <th className="p-4 font-semibold">Kategori</th>
 
                 <th className="p-4 font-semibold text-right">KM Saat Ini</th>
+                <th className="p-4 font-semibold text-center">STNK</th>
+                <th className="p-4 font-semibold text-center">Pajak 5th</th>
+                <th className="p-4 font-semibold text-center">KIR</th>
                 <th className="p-4 font-semibold text-right">Service Default</th>
                 <th className="p-4 font-semibold text-center">Aksi</th>
               </tr>
@@ -189,6 +202,9 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
                   </td>
 
                   <td className="p-4 text-right font-mono">{truck.currentOdometer.toLocaleString()}</td>
+                  <td className="p-4 text-center">{getExpiryBadge(truck.stnkExpiry)}</td>
+                  <td className="p-4 text-center">{getExpiryBadge(truck.tax5yearExpiry)}</td>
+                  <td className="p-4 text-center">{getExpiryBadge(truck.kirExpiry)}</td>
                   <td className="p-4 text-right text-gray-500">Every {truck.serviceIntervalKm.toLocaleString()} KM</td>
                   <td className="p-4 text-center">
                     <button
@@ -203,7 +219,7 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
               ))}
               {filteredTrucks.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-gray-500">Data tidak ditemukan</td>
+                  <td colSpan={10} className="p-8 text-center text-gray-500">Data tidak ditemukan</td>
                 </tr>
               )}
             </tbody>
@@ -267,6 +283,25 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
                       <option value="Small">Small</option>
                       <option value="Big">Big</option>
                     </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Dokumen Kendaraan */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-gray-800 border-b pb-2 flex items-center gap-2"><FileText size={16} /> Dokumen Kendaraan</h3>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Pajak STNK Tahunan</label>
+                    <input type="date" className="w-full border p-2 rounded" value={formData.stnkExpiry || ''} onChange={e => setFormData({ ...formData, stnkExpiry: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Pajak 5 Tahunan</label>
+                    <input type="date" className="w-full border p-2 rounded" value={formData.tax5yearExpiry || ''} onChange={e => setFormData({ ...formData, tax5yearExpiry: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Masa Berlaku KIR</label>
+                    <input type="date" className="w-full border p-2 rounded" value={formData.kirExpiry || ''} onChange={e => setFormData({ ...formData, kirExpiry: e.target.value })} />
                   </div>
                 </div>
               </div>

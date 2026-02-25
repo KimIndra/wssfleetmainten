@@ -25,6 +25,9 @@ const trucksTable = pgTable('trucks', {
     lastServiceOdometer: integer('last_service_odometer').default(0),
     serviceIntervalKm: integer('service_interval_km').notNull().default(10000),
     serviceIntervalMonths: integer('service_interval_months').notNull().default(6),
+    stnkExpiry: text('stnk_expiry'),
+    tax5yearExpiry: text('tax5year_expiry'),
+    kirExpiry: text('kir_expiry'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -75,7 +78,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             const { id, plateNumber, brand, model, year, size, clientId,
                 currentOdometer, lastServiceDate, lastServiceOdometer,
-                serviceIntervalKm, serviceIntervalMonths, schedules = [] } = body;
+                serviceIntervalKm, serviceIntervalMonths,
+                stnkExpiry, tax5yearExpiry, kirExpiry,
+                schedules = [] } = body;
 
             if (!id || !plateNumber || !brand || !model || !year || !size || !clientId) {
                 return res.status(400).json({ error: 'Missing required truck fields' });
@@ -88,6 +93,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 lastServiceOdometer: lastServiceOdometer ?? 0,
                 serviceIntervalKm: serviceIntervalKm ?? 10000,
                 serviceIntervalMonths: serviceIntervalMonths ?? 6,
+                stnkExpiry: stnkExpiry ?? null,
+                tax5yearExpiry: tax5yearExpiry ?? null,
+                kirExpiry: kirExpiry ?? null,
             }).returning();
 
             if (schedules.length > 0) {

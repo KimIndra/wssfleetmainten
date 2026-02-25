@@ -35,6 +35,11 @@ export interface Truck {
 
   // Specific Schedules
   schedules: ServiceSchedule[];
+
+  // Dokumen Kendaraan
+  stnkExpiry?: string | null;       // Masa berlaku pajak STNK tahunan
+  tax5yearExpiry?: string | null;   // Masa berlaku pajak 5 tahunan
+  kirExpiry?: string | null;        // Masa berlaku KIR
 }
 
 export interface SparePart {
