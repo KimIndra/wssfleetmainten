@@ -22,6 +22,8 @@ const trucksTable = pgTable('trucks', {
     clientId: text('client_id').notNull(),
     allocation: text('allocation'),
     description: text('description'),
+    engineNumber: text('engine_number'),
+    chassisNumber: text('chassis_number'),
     currentOdometer: integer('current_odometer').notNull().default(0),
     lastServiceDate: text('last_service_date'),
     lastServiceOdometer: integer('last_service_odometer').default(0),
@@ -78,7 +80,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
             body = body || {};
 
-            const { id, plateNumber, brand, model, year, size, clientId, allocation, description,
+            const { id, plateNumber, brand, model, year, size, clientId, allocation, description, engineNumber, chassisNumber,
                 currentOdometer, lastServiceDate, lastServiceOdometer,
                 serviceIntervalKm, serviceIntervalMonths,
                 stnkExpiry, tax5yearExpiry, kirExpiry,
@@ -92,6 +94,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 id, plateNumber, brand, model, year, size, clientId,
                 allocation: allocation ?? null,
                 description: description ?? null,
+                engineNumber: engineNumber ?? null,
+                chassisNumber: chassisNumber ?? null,
                 currentOdometer: currentOdometer ?? 0,
                 lastServiceDate: lastServiceDate ?? null,
                 lastServiceOdometer: lastServiceOdometer ?? 0,

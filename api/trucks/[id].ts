@@ -14,6 +14,8 @@ const trucksTable = pgTable('trucks', {
     clientId: text('client_id').notNull(),
     allocation: text('allocation'),
     description: text('description'),
+    engineNumber: text('engine_number'),
+    chassisNumber: text('chassis_number'),
     currentOdometer: integer('current_odometer').notNull().default(0),
     lastServiceDate: text('last_service_date'),
     lastServiceOdometer: integer('last_service_odometer').default(0),
@@ -79,14 +81,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
             body = body || {};
 
-            const { plateNumber, brand, model, year, size, clientId, allocation, description,
+            const { plateNumber, brand, model, year, size, clientId, allocation, description, engineNumber, chassisNumber,
                 currentOdometer, lastServiceDate, lastServiceOdometer,
                 serviceIntervalKm, serviceIntervalMonths,
                 stnkExpiry, tax5yearExpiry, kirExpiry,
                 schedules } = body;
 
             const [updated] = await db.update(trucksTable)
-                .set({ plateNumber, brand, model, year, size, clientId, allocation, description, currentOdometer, lastServiceDate, lastServiceOdometer, serviceIntervalKm, serviceIntervalMonths, stnkExpiry, tax5yearExpiry, kirExpiry })
+                .set({ plateNumber, brand, model, year, size, clientId, allocation, description, engineNumber, chassisNumber, currentOdometer, lastServiceDate, lastServiceOdometer, serviceIntervalKm, serviceIntervalMonths, stnkExpiry, tax5yearExpiry, kirExpiry })
                 .where(eq(trucksTable.id, id)).returning();
 
             if (!updated) return res.status(404).json({ error: 'Truck not found' });

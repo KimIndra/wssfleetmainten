@@ -27,6 +27,8 @@ export interface Truck {
   clientId: string;
   allocation?: string | null;     // Alokasi penempatan truk
   description?: string | null;    // Deskripsi/keterangan truk
+  engineNumber?: string | null;   // Nomor mesin
+  chassisNumber?: string | null;  // Nomor rangka
   currentOdometer: number;
 
   // General/Main Service (Legacy/Default)

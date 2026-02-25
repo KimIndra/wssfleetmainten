@@ -292,6 +292,16 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">No Mesin</label>
+                    <input className="w-full border p-2 rounded" placeholder="Contoh: 4D34-T12345" value={formData.engineNumber || ''} onChange={e => setFormData({ ...formData, engineNumber: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">No Rangka</label>
+                    <input className="w-full border p-2 rounded" placeholder="Contoh: MHMFE74P5BK12345" value={formData.chassisNumber || ''} onChange={e => setFormData({ ...formData, chassisNumber: e.target.value })} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Client</label>
                     <select className="w-full border p-2 rounded" required value={formData.clientId || ''} onChange={e => setFormData({ ...formData, clientId: e.target.value })}>
                       <option value="">Pilih Client</option>
