@@ -151,7 +151,6 @@ const App: React.FC = () => {
           <ServiceHistory
             services={services}
             trucks={trucks}
-            onAddService={handleAddService}
             onDeleteService={handleDeleteService}
           />
         );
