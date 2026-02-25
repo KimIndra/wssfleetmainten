@@ -25,6 +25,7 @@ export interface Truck {
   year: number;
   size: TruckSize;
   clientId: string;
+  allocation?: string | null;     // Alokasi penempatan truk
   currentOdometer: number;
 
   // General/Main Service (Legacy/Default)

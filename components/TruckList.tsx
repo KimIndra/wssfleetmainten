@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
-import { Truck, Client, ServiceSchedule } from '../types';
-import { Search, Plus, Pencil, Trash, Calendar, Settings, FileText } from 'lucide-react';
+import { Truck, Client, ServiceSchedule, TruckSize } from '../types';
+import { Settings, Plus, Trash, FileText, Search } from 'lucide-react';
+
+const ALLOCATION_OPTIONS: Record<TruckSize, string[]> = {
+  Big: ['Kurere', 'Depo', 'Dam CBT', 'Dongjin'],
+  Small: ['DDS JKT', 'DDS KRW', 'DDS SMRG', 'DAM KRW', 'Dongjin', 'Nissin'],
+};
 
 interface TruckListProps {
   trucks: Truck[];
@@ -73,7 +78,7 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
   const handleAddSchedule = () => {
     if (newSchedule.serviceName && newSchedule.intervalKm) {
       const scheduleToAdd: ServiceSchedule = {
-        id: `sch-${Date.now()}`,
+        id: `sch - ${Date.now()} `,
         serviceName: newSchedule.serviceName,
         intervalKm: newSchedule.intervalKm,
         intervalMonths: newSchedule.intervalMonths || 6,
@@ -191,6 +196,7 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
                 <th className="p-4 font-semibold">Merk/Model</th>
                 <th className="p-4 font-semibold">Client</th>
                 <th className="p-4 font-semibold">Kategori</th>
+                <th className="p-4 font-semibold">Alokasi</th>
 
                 <th className="p-4 font-semibold text-right">KM Saat Ini</th>
                 <th className="p-4 font-semibold text-center">STNK</th>
@@ -207,8 +213,13 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
                   <td className="p-4 text-gray-600">{truck.brand} {truck.model} ({truck.year})</td>
                   <td className="p-4 text-blue-600">{clients.find(c => c.id === truck.clientId)?.name}</td>
                   <td className="p-4">
-                    <span className={`px-2 py-1 rounded text-xs ${truck.size === 'Big' ? 'bg-purple-100 text-purple-700' : 'bg-teal-100 text-teal-700'}`}>
+                    <span className={`px - 2 py - 1 rounded text - xs ${truck.size === 'Big' ? 'bg-purple-100 text-purple-700' : 'bg-teal-100 text-teal-700'} `}>
                       Truck {truck.size}
+                    </span>
+                  </td>
+                  <td className="p-4">
+                    <span className="px-2 py-1 rounded text-xs bg-indigo-100 text-indigo-700">
+                      {truck.allocation || '-'}
                     </span>
                   </td>
 
@@ -302,6 +313,19 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
                     >
                       <option value="Small">Small</option>
                       <option value="Big">Big</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Alokasi</label>
+                    <select
+                      className="w-full border p-2 rounded"
+                      value={formData.allocation || ''}
+                      onChange={e => setFormData({ ...formData, allocation: e.target.value || null })}
+                    >
+                      <option value="">-- Pilih Alokasi --</option>
+                      {(ALLOCATION_OPTIONS[(formData.size as TruckSize) || 'Big'] || []).map(opt => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
                     </select>
                   </div>
                 </div>
