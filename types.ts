@@ -63,4 +63,4 @@ export interface ServiceRecord {
   mechanic: string;
 }
 
-export type ViewState = 'dashboard' | 'monitoring' | 'trucks' | 'history' | 'reports' | 'clients';
+export type ViewState = 'dashboard' | 'monitoring' | 'trucks' | 'history' | 'reports' | 'clients' | 'input-service';

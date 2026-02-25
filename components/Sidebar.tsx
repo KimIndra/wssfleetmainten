@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Truck, History, FileBarChart, Activity, LogOut, Users } from 'lucide-react';
+import { LayoutDashboard, Truck, History, FileBarChart, Activity, LogOut, Users, Wrench } from 'lucide-react';
 import { ViewState } from '../types';
 
 interface SidebarProps {
@@ -11,6 +11,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange }) => {
   const menuItems: { id: ViewState; label: string; icon: React.ReactNode }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
     { id: 'monitoring', label: 'Monitoring Service', icon: <Activity size={20} /> },
+    { id: 'input-service', label: 'Input Service', icon: <Wrench size={20} /> },
     { id: 'trucks', label: 'Data Armada', icon: <Truck size={20} /> },
     { id: 'clients', label: 'Kelola Client', icon: <Users size={20} /> },
     { id: 'history', label: 'Riwayat Service', icon: <History size={20} /> },
@@ -30,8 +31,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange }) => {
             key={item.id}
             onClick={() => onViewChange(item.id)}
             className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${currentView === item.id
-                ? 'bg-blue-600 text-white'
-                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              ? 'bg-blue-600 text-white'
+              : 'text-slate-400 hover:bg-slate-800 hover:text-white'
               }`}
           >
             {item.icon}

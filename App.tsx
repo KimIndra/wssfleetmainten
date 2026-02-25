@@ -6,6 +6,7 @@ import TruckList from './components/TruckList';
 import ServiceHistory from './components/ServiceHistory';
 import Reports from './components/Reports';
 import ClientManagement from './components/ClientManagement';
+import InputService from './components/InputService';
 import { ViewState, Truck, ServiceRecord, Client } from './types';
 import { api } from './lib/api';
 
@@ -128,6 +129,13 @@ const App: React.FC = () => {
         return <Dashboard trucks={trucks} services={services} />;
       case 'monitoring':
         return <Monitoring trucks={trucks} onUpdateOdometer={handleUpdateOdometer} />;
+      case 'input-service':
+        return (
+          <InputService
+            trucks={trucks}
+            onAddService={handleAddService}
+          />
+        );
       case 'trucks':
         return (
           <TruckList
