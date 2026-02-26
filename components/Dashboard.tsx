@@ -1,5 +1,5 @@
 import React from 'react';
-import { Truck, ServiceRecord } from '../types';
+import { Truck, ServiceRecord, ViewState } from '../types';
 import {
   Truck as TruckIcon,
   Wrench,
@@ -9,16 +9,18 @@ import {
   FileText,
   ShieldAlert,
   Edit,
-  RefreshCw
+  RefreshCw,
+  ArrowRight
 } from 'lucide-react';
 import { formatCurrency, getNextServiceInfo } from '../utils';
 
 interface DashboardProps {
   trucks: Truck[];
   services: ServiceRecord[];
+  onNavigate?: (view: ViewState) => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ trucks, services }) => {
+const Dashboard: React.FC<DashboardProps> = ({ trucks, services, onNavigate }) => {
   const totalTrucks = trucks.length;
   const totalServiceCost = services.reduce((sum, s) => sum + s.totalCost, 0);
 
@@ -93,80 +95,134 @@ const Dashboard: React.FC<DashboardProps> = ({ trucks, services }) => {
       {/* 2. Summary Cards Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1 */}
-        <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-100 flex items-center space-x-4">
-          <div className="p-3 bg-blue-100 rounded-lg text-blue-600">
-            <TruckIcon size={24} />
+        <div
+          onClick={() => onNavigate?.('trucks')}
+          className="bg-white p-5 rounded-xl shadow-sm border border-slate-100 flex justify-between items-center cursor-pointer hover:shadow-md hover:border-blue-200 transition-all group"
+        >
+          <div className="flex items-center space-x-4">
+            <div className="p-3 bg-blue-100 rounded-lg text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+              <TruckIcon size={24} />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-slate-500">Total Armada</p>
+              <p className="text-2xl font-bold text-slate-800">{totalTrucks}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-medium text-slate-500">Total Armada</p>
-            <p className="text-2xl font-bold text-slate-800">{totalTrucks}</p>
-          </div>
+          <ArrowRight size={20} className="text-slate-300 group-hover:text-blue-500 transition-colors" />
         </div>
 
         {/* Card 2 */}
-        <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-100 flex items-center space-x-4">
-          <div className="p-3 bg-red-100 rounded-lg text-red-600">
-            <AlertTriangle size={24} />
+        <div
+          onClick={() => onNavigate?.('monitoring')}
+          className="bg-white p-5 rounded-xl shadow-sm border border-slate-100 flex justify-between items-center cursor-pointer hover:shadow-md hover:border-red-200 transition-all group"
+        >
+          <div className="flex items-center space-x-4">
+            <div className="p-3 bg-red-100 rounded-lg text-red-600 group-hover:bg-red-600 group-hover:text-white transition-colors">
+              <AlertTriangle size={24} />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-slate-500">Perlu Service (Urgent)</p>
+              <p className="text-2xl font-bold text-slate-800">{overdueCount}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-medium text-slate-500">Perlu Service (Urgent)</p>
-            <p className="text-2xl font-bold text-slate-800">{overdueCount}</p>
-          </div>
+          <ArrowRight size={20} className="text-slate-300 group-hover:text-red-500 transition-colors" />
         </div>
 
         {/* Card 3 */}
-        <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-100 flex items-center space-x-4">
-          <div className="p-3 bg-yellow-100 rounded-lg text-yellow-600">
-            <Wrench size={24} />
+        <div
+          onClick={() => onNavigate?.('monitoring')}
+          className="bg-white p-5 rounded-xl shadow-sm border border-slate-100 flex justify-between items-center cursor-pointer hover:shadow-md hover:border-yellow-200 transition-all group"
+        >
+          <div className="flex items-center space-x-4">
+            <div className="p-3 bg-yellow-100 rounded-lg text-yellow-600 group-hover:bg-yellow-500 group-hover:text-white transition-colors">
+              <Wrench size={24} />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-slate-500">Mendekati Jadwal</p>
+              <p className="text-2xl font-bold text-slate-800">{warningCount}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-medium text-slate-500">Mendekati Jadwal</p>
-            <p className="text-2xl font-bold text-slate-800">{warningCount}</p>
-          </div>
+          <ArrowRight size={20} className="text-slate-300 group-hover:text-yellow-500 transition-colors" />
         </div>
 
         {/* Card 4 */}
-        <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-100 flex items-center space-x-4">
-          <div className="p-3 bg-green-100 rounded-lg text-green-600">
-            <TrendingUp size={24} />
+        <div
+          onClick={() => onNavigate?.('history')}
+          className="bg-white p-5 rounded-xl shadow-sm border border-slate-100 flex justify-between items-center cursor-pointer hover:shadow-md hover:border-green-200 transition-all group"
+        >
+          <div className="flex items-center space-x-4">
+            <div className="p-3 bg-green-100 rounded-lg text-green-600 group-hover:bg-green-600 group-hover:text-white transition-colors">
+              <TrendingUp size={24} />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-slate-500">Total Biaya Service</p>
+              <p className="text-xl font-bold text-slate-800">{formatCurrency(totalServiceCost)}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-medium text-slate-500">Total Biaya Service</p>
-            <p className="text-xl font-bold text-slate-800">{formatCurrency(totalServiceCost)}</p>
-          </div>
+          <ArrowRight size={20} className="text-slate-300 group-hover:text-green-500 transition-colors" />
         </div>
       </div>
 
       {/* 3. Document Warning Cards Section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-red-50 p-5 rounded-xl shadow-sm border border-red-200 flex items-center space-x-4">
-          <div className="p-3 bg-red-100 rounded-lg text-red-600">
-            <FileText size={24} />
+        <div
+          onClick={() => onNavigate?.('trucks')}
+          className={`p-5 rounded-xl shadow-sm border flex justify-between items-center cursor-pointer hover:shadow-md transition-all group ${docStats.stnkExpired > 0 ? 'bg-red-50 border-red-200 hover:border-red-300' : 'bg-white border-slate-100 hover:border-blue-200'}`}
+        >
+          <div className="flex items-center space-x-4">
+            <div className={`p-3 rounded-lg transition-colors ${docStats.stnkExpired > 0 ? 'bg-red-100 text-red-600 group-hover:bg-red-600 group-hover:text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600'}`}>
+              <FileText size={24} />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-slate-600">STNK Tahunan</p>
+              {docStats.stnkExpired > 0 ? (
+                <p className="text-lg font-bold text-red-600">{docStats.stnkExpired} Expired</p>
+              ) : (
+                <p className="text-lg font-bold text-green-600">Aman</p>
+              )}
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-medium text-slate-600">STNK Tahunan</p>
-            <p className="text-lg font-bold text-red-600">{docStats.stnkExpired} Expired</p>
-          </div>
+          <ArrowRight size={20} className={`transition-colors ${docStats.stnkExpired > 0 ? 'text-red-300 group-hover:text-red-500' : 'text-slate-300 group-hover:text-blue-500'}`} />
         </div>
 
-        <div className="bg-red-50 p-5 rounded-xl shadow-sm border border-red-200 flex items-center space-x-4">
-          <div className="p-3 bg-red-100 rounded-lg text-red-600">
-            <ShieldAlert size={24} />
+        <div
+          onClick={() => onNavigate?.('trucks')}
+          className={`p-5 rounded-xl shadow-sm border flex justify-between items-center cursor-pointer hover:shadow-md transition-all group ${docStats.tax5Expired > 0 ? 'bg-red-50 border-red-200 hover:border-red-300' : 'bg-white border-slate-100 hover:border-blue-200'}`}
+        >
+          <div className="flex items-center space-x-4">
+            <div className={`p-3 rounded-lg transition-colors ${docStats.tax5Expired > 0 ? 'bg-red-100 text-red-600 group-hover:bg-red-600 group-hover:text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600'}`}>
+              <ShieldAlert size={24} />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-slate-600">Pajak 5 Tahunan</p>
+              {docStats.tax5Expired > 0 ? (
+                <p className="text-lg font-bold text-red-600">{docStats.tax5Expired} Expired</p>
+              ) : (
+                <p className="text-lg font-bold text-green-600">Aman</p>
+              )}
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-medium text-slate-600">Pajak 5 Tahunan</p>
-            <p className="text-lg font-bold text-red-600">{docStats.tax5Expired} Expired</p>
-          </div>
+          <ArrowRight size={20} className={`transition-colors ${docStats.tax5Expired > 0 ? 'text-red-300 group-hover:text-red-500' : 'text-slate-300 group-hover:text-blue-500'}`} />
         </div>
 
-        <div className="bg-red-50 p-5 rounded-xl shadow-sm border border-red-200 flex items-center space-x-4">
-          <div className="p-3 bg-red-100 rounded-lg text-red-600">
-            <CheckCircle size={24} />
+        <div
+          onClick={() => onNavigate?.('trucks')}
+          className={`p-5 rounded-xl shadow-sm border flex justify-between items-center cursor-pointer hover:shadow-md transition-all group ${docStats.kirExpired > 0 ? 'bg-red-50 border-red-200 hover:border-red-300' : 'bg-white border-slate-100 hover:border-blue-200'}`}
+        >
+          <div className="flex items-center space-x-4">
+            <div className={`p-3 rounded-lg transition-colors ${docStats.kirExpired > 0 ? 'bg-red-100 text-red-600 group-hover:bg-red-600 group-hover:text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600'}`}>
+              <CheckCircle size={24} />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-slate-600">KIR</p>
+              {docStats.kirExpired > 0 ? (
+                <p className="text-lg font-bold text-red-600">{docStats.kirExpired} Expired</p>
+              ) : (
+                <p className="text-lg font-bold text-green-600">Aman</p>
+              )}
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-medium text-slate-600">KIR</p>
-            <p className="text-lg font-bold text-red-600">{docStats.kirExpired} Expired</p>
-          </div>
+          <ArrowRight size={20} className={`transition-colors ${docStats.kirExpired > 0 ? 'text-red-300 group-hover:text-red-500' : 'text-slate-300 group-hover:text-blue-500'}`} />
         </div>
       </div>
 
@@ -205,7 +261,8 @@ const Dashboard: React.FC<DashboardProps> = ({ trucks, services }) => {
                     <td className="px-5 py-4 text-center">{getStatusBadge(kir)}</td>
                     <td className="px-5 py-4 text-right">
                       <button
-                        className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 rounded-lg text-xs font-medium transition-colors"
+                        onClick={() => onNavigate?.('trucks')}
+                        className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 rounded-lg text-xs font-medium transition-colors cursor-pointer"
                         title="Update Data"
                       >
                         <RefreshCw size={14} /> Update Data
@@ -248,7 +305,11 @@ const Dashboard: React.FC<DashboardProps> = ({ trucks, services }) => {
               else if (progressPercent >= 75) progressColor = 'bg-yellow-500';
 
               return (
-                <div key={truck.id} className="flex items-center justify-between py-3 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors px-2 rounded-md -mx-2">
+                <div
+                  key={truck.id}
+                  onClick={() => onNavigate?.('monitoring')}
+                  className="flex items-center justify-between py-3 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors px-2 rounded-md -mx-2 cursor-pointer group"
+                >
                   <div className="flex items-center space-x-3">
                     <div className="relative flex h-3 w-3">
                       {(dotColor === 'bg-red-500' || dotColor === 'bg-yellow-500') && (
@@ -257,7 +318,7 @@ const Dashboard: React.FC<DashboardProps> = ({ trucks, services }) => {
                       <span className={`relative inline-flex rounded-full h-3 w-3 ${dotColor}`}></span>
                     </div>
                     <div>
-                      <p className="font-semibold text-slate-800">{truck.plateNumber}</p>
+                      <p className="font-semibold text-slate-800 group-hover:text-blue-600 transition-colors">{truck.plateNumber}</p>
                       <p className="text-xs text-slate-500">{truck.brand} {truck.model}</p>
                     </div>
                   </div>
@@ -274,6 +335,12 @@ const Dashboard: React.FC<DashboardProps> = ({ trucks, services }) => {
               );
             })}
           </div>
+          <button
+            onClick={() => onNavigate?.('monitoring')}
+            className="w-full mt-4 py-2 text-sm text-blue-600 font-medium hover:bg-blue-50 rounded-lg transition-colors border border-dashed border-blue-200 flex items-center justify-center gap-2 cursor-pointer"
+          >
+            Lihat Semua Jadwal <ArrowRight size={16} />
+          </button>
         </div>
 
         {/* Right Column: Riwayat Service Terakhir */}
@@ -283,9 +350,13 @@ const Dashboard: React.FC<DashboardProps> = ({ trucks, services }) => {
             {services.length > 0 ? (
               <div className="space-y-4">
                 {services.slice(0, 5).map(service => (
-                  <div key={service.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
+                  <div
+                    key={service.id}
+                    onClick={() => onNavigate?.('history')}
+                    className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100 cursor-pointer hover:border-blue-200 hover:shadow-sm transition-all group"
+                  >
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
+                      <div className="p-2 bg-blue-100 rounded-lg text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
                         <Wrench size={18} />
                       </div>
                       <div>
@@ -301,7 +372,7 @@ const Dashboard: React.FC<DashboardProps> = ({ trucks, services }) => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-bold text-slate-800">{trucks.find(t => t.id === service.truckId)?.plateNumber}</p>
+                      <p className="text-sm font-bold text-slate-800 group-hover:text-blue-600 transition-colors">{trucks.find(t => t.id === service.truckId)?.plateNumber}</p>
                       <p className="text-sm font-bold text-green-600 mt-0.5">{formatCurrency(service.totalCost)}</p>
                     </div>
                   </div>
@@ -320,6 +391,14 @@ const Dashboard: React.FC<DashboardProps> = ({ trucks, services }) => {
               </div>
             )}
           </div>
+          {services.length > 0 && (
+            <button
+              onClick={() => onNavigate?.('history')}
+              className="w-full mt-4 py-2 text-sm text-blue-600 font-medium hover:bg-blue-50 rounded-lg transition-colors border border-dashed border-blue-200 flex items-center justify-center gap-2 cursor-pointer"
+            >
+              Cek Riwayat Lengkap <ArrowRight size={16} />
+            </button>
+          )}
         </div>
 
       </div>

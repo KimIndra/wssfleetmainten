@@ -126,7 +126,7 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch (currentView) {
       case 'dashboard':
-        return <Dashboard trucks={trucks} services={services} />;
+        return <Dashboard trucks={trucks} services={services} onNavigate={setCurrentView} />;
       case 'monitoring':
         return <Monitoring trucks={trucks} onUpdateOdometer={handleUpdateOdometer} />;
       case 'input-service':
