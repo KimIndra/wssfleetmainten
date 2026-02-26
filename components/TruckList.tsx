@@ -7,6 +7,53 @@ const ALLOCATION_OPTIONS: Record<TruckSize, string[]> = {
   Small: ['DDS JKT', 'DDS KRW', 'DDS SMRG', 'DAM KRW', 'Dongjin', 'Nissin'],
 };
 
+// --- Reusable sub-components (defined OUTSIDE to prevent re-mount on parent re-render) ---
+const InputField = ({ label, icon: Icon, required, ...props }: any) => (
+  <div>
+    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+      {Icon && <span className="inline-flex items-center gap-1"><Icon size={12} /> {label}</span>}
+      {!Icon && label}
+      {required && <span className="text-red-400 ml-0.5">*</span>}
+    </label>
+    <input
+      className="w-full border border-slate-200 bg-slate-50 focus:bg-white p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+      {...props}
+    />
+  </div>
+);
+
+const SelectField = ({ label, icon: Icon, required, children, ...props }: any) => (
+  <div>
+    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+      {Icon && <span className="inline-flex items-center gap-1"><Icon size={12} /> {label}</span>}
+      {!Icon && label}
+      {required && <span className="text-red-400 ml-0.5">*</span>}
+    </label>
+    <select
+      className="w-full border border-slate-200 bg-slate-50 focus:bg-white p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all cursor-pointer appearance-none"
+      {...props}
+    >
+      {children}
+    </select>
+  </div>
+);
+
+const SectionHeader = ({ num, icon: Icon, title, subtitle }: { num: number; icon: any; title: string; subtitle?: string }) => (
+  <div className="flex items-center gap-3 mb-4">
+    <div className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
+      {num}
+    </div>
+    <div className="flex items-center gap-2">
+      <Icon size={16} className="text-blue-600" />
+      <div>
+        <h3 className="text-sm font-bold text-slate-800">{title}</h3>
+        {subtitle && <p className="text-[11px] text-slate-400">{subtitle}</p>}
+      </div>
+    </div>
+  </div>
+);
+
+// --- Main Component ---
 interface TruckListProps {
   trucks: Truck[];
   clients: Client[];
@@ -128,53 +175,6 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
       alert('Gagal menghapus: ' + (err.message ?? 'Terjadi kesalahan'));
     }
   };
-
-  // Reusable styled input
-  const InputField = ({ label, icon: Icon, required, ...props }: any) => (
-    <div>
-      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
-        {Icon && <span className="inline-flex items-center gap-1"><Icon size={12} /> {label}</span>}
-        {!Icon && label}
-        {required && <span className="text-red-400 ml-0.5">*</span>}
-      </label>
-      <input
-        className="w-full border border-slate-200 bg-slate-50 focus:bg-white p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-        {...props}
-      />
-    </div>
-  );
-
-  const SelectField = ({ label, icon: Icon, required, children, ...props }: any) => (
-    <div>
-      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
-        {Icon && <span className="inline-flex items-center gap-1"><Icon size={12} /> {label}</span>}
-        {!Icon && label}
-        {required && <span className="text-red-400 ml-0.5">*</span>}
-      </label>
-      <select
-        className="w-full border border-slate-200 bg-slate-50 focus:bg-white p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all cursor-pointer appearance-none"
-        {...props}
-      >
-        {children}
-      </select>
-    </div>
-  );
-
-  // Section header component
-  const SectionHeader = ({ num, icon: Icon, title, subtitle }: { num: number; icon: any; title: string; subtitle?: string }) => (
-    <div className="flex items-center gap-3 mb-4">
-      <div className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
-        {num}
-      </div>
-      <div className="flex items-center gap-2">
-        <Icon size={16} className="text-blue-600" />
-        <div>
-          <h3 className="text-sm font-bold text-slate-800">{title}</h3>
-          {subtitle && <p className="text-[11px] text-slate-400">{subtitle}</p>}
-        </div>
-      </div>
-    </div>
-  );
 
   return (
     <div className="p-6 bg-slate-50 min-h-full">
