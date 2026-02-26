@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Truck, Client, ServiceSchedule, TruckSize } from '../types';
-import { Settings, Plus, Trash, FileText, Search } from 'lucide-react';
+import { Settings, Plus, Trash2, FileText, Search, Truck as TruckIcon, Calendar, Gauge, Building2, Hash, ClipboardList, Clock, Save, X, ChevronDown, MapPin, Wrench } from 'lucide-react';
 
 const ALLOCATION_OPTIONS: Record<TruckSize, string[]> = {
   Big: ['Kurere', 'Depo', 'Dam CBT', 'Dongjin'],
@@ -16,7 +16,6 @@ interface TruckListProps {
 }
 
 const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEditTruck, onDeleteTruck }) => {
-  // Helper: badge status berdasarkan tanggal expiry
   const getExpiryBadge = (dateStr?: string | null) => {
     if (!dateStr) return <span className="text-xs text-gray-400 italic">Belum diisi</span>;
     const today = new Date();
@@ -28,13 +27,11 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
   };
   const [filterClient, setFilterClient] = useState<string>('all');
   const [filterSize, setFilterSize] = useState<string>('all');
-
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // New Truck Form State
   const initialFormState: Partial<Truck> = {
     size: 'Big',
     serviceIntervalKm: 10000,
@@ -45,8 +42,6 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
   };
 
   const [formData, setFormData] = useState<Partial<Truck>>(initialFormState);
-
-  // State for new schedule input
   const [newSchedule, setNewSchedule] = useState<Partial<ServiceSchedule>>({
     serviceName: '',
     intervalKm: 10000,
@@ -58,7 +53,6 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
     const matchesSize = filterSize === 'all' || truck.size === filterSize;
     const matchesSearch = truck.plateNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       truck.brand.toLowerCase().includes(searchTerm.toLowerCase());
-
     return matchesClient && matchesSize && matchesSearch;
   });
 
@@ -74,23 +68,20 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
     setIsModalOpen(true);
   };
 
-  // Schedule Management Handlers
   const handleAddSchedule = () => {
     if (newSchedule.serviceName && newSchedule.intervalKm) {
       const scheduleToAdd: ServiceSchedule = {
-        id: `sch - ${Date.now()} `,
+        id: `sch-${Date.now()}`,
         serviceName: newSchedule.serviceName,
         intervalKm: newSchedule.intervalKm,
         intervalMonths: newSchedule.intervalMonths || 6,
-        lastServiceDate: new Date().toISOString().split('T')[0], // Default to today
-        lastServiceOdometer: formData.currentOdometer || 0 // Default to current
+        lastServiceDate: new Date().toISOString().split('T')[0],
+        lastServiceOdometer: formData.currentOdometer || 0
       };
-
       setFormData({
         ...formData,
         schedules: [...(formData.schedules || []), scheduleToAdd]
       });
-
       setNewSchedule({ serviceName: '', intervalKm: 10000, intervalMonths: 6 });
     }
   };
@@ -109,10 +100,8 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
     setIsSubmitting(true);
     try {
       if (isEditing && formData.id) {
-        // Edit Mode
         await onEditTruck(formData as Truck);
       } else {
-        // Add Mode
         const newTruckData: Truck = {
           ...formData as Truck,
           id: Math.random().toString(36).substr(2, 9),
@@ -121,7 +110,6 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
         };
         await onAddTruck(newTruckData);
       }
-      // Tutup modal hanya jika API berhasil
       setIsModalOpen(false);
       setFormData(initialFormState);
     } catch (err: any) {
@@ -141,41 +129,96 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
     }
   };
 
+  // Reusable styled input
+  const InputField = ({ label, icon: Icon, required, ...props }: any) => (
+    <div>
+      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+        {Icon && <span className="inline-flex items-center gap-1"><Icon size={12} /> {label}</span>}
+        {!Icon && label}
+        {required && <span className="text-red-400 ml-0.5">*</span>}
+      </label>
+      <input
+        className="w-full border border-slate-200 bg-slate-50 focus:bg-white p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+        {...props}
+      />
+    </div>
+  );
+
+  const SelectField = ({ label, icon: Icon, required, children, ...props }: any) => (
+    <div>
+      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+        {Icon && <span className="inline-flex items-center gap-1"><Icon size={12} /> {label}</span>}
+        {!Icon && label}
+        {required && <span className="text-red-400 ml-0.5">*</span>}
+      </label>
+      <select
+        className="w-full border border-slate-200 bg-slate-50 focus:bg-white p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all cursor-pointer appearance-none"
+        {...props}
+      >
+        {children}
+      </select>
+    </div>
+  );
+
+  // Section header component
+  const SectionHeader = ({ num, icon: Icon, title, subtitle }: { num: number; icon: any; title: string; subtitle?: string }) => (
+    <div className="flex items-center gap-3 mb-4">
+      <div className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
+        {num}
+      </div>
+      <div className="flex items-center gap-2">
+        <Icon size={16} className="text-blue-600" />
+        <div>
+          <h3 className="text-sm font-bold text-slate-800">{title}</h3>
+          {subtitle && <p className="text-[11px] text-slate-400">{subtitle}</p>}
+        </div>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="p-6">
+    <div className="p-6 bg-slate-50 min-h-full">
+      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-        <h1 className="text-2xl font-bold text-gray-800">Data Armada & Jadwal</h1>
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl text-white shadow-lg shadow-blue-200">
+            <TruckIcon size={24} />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-800">Data Armada & Jadwal</h1>
+            <p className="text-sm text-slate-500">{trucks.length} unit armada terdaftar</p>
+          </div>
+        </div>
         <button
           onClick={handleOpenAdd}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+          className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-medium shadow-lg shadow-blue-200 transition-all cursor-pointer"
         >
           <Plus size={18} /> Tambah Truk
         </button>
       </div>
 
+      {/* Filters */}
       <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-6 grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-4">
         <div className="relative md:col-span-1">
-          <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
+          <Search className="absolute left-3 top-2.5 text-slate-400" size={18} />
           <input
             type="text"
             placeholder="Cari No Polisi / Merk..."
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-slate-50 focus:bg-white transition-all"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
           />
         </div>
-
         <select
-          className="border border-gray-300 rounded-lg py-2 px-3 outline-none focus:ring-2 focus:ring-blue-500"
+          className="border border-slate-200 rounded-lg py-2 px-3 outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 focus:bg-white transition-all cursor-pointer"
           value={filterClient}
           onChange={e => setFilterClient(e.target.value)}
         >
           <option value="all">Semua Client</option>
           {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
-
         <select
-          className="border border-gray-300 rounded-lg py-2 px-3 outline-none focus:ring-2 focus:ring-blue-500"
+          className="border border-slate-200 rounded-lg py-2 px-3 outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 focus:bg-white transition-all cursor-pointer"
           value={filterSize}
           onChange={e => setFilterSize(e.target.value)}
         >
@@ -183,10 +226,9 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
           <option value="Small">Kecil (Small)</option>
           <option value="Big">Besar (Big)</option>
         </select>
-
-
       </div>
 
+      {/* Table */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
@@ -197,7 +239,6 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
                 <th className="p-4 font-semibold">Client</th>
                 <th className="p-4 font-semibold">Kategori</th>
                 <th className="p-4 font-semibold">Alokasi</th>
-
                 <th className="p-4 font-semibold text-right">KM Saat Ini</th>
                 <th className="p-4 font-semibold text-center">STNK</th>
                 <th className="p-4 font-semibold text-center">Pajak 5th</th>
@@ -208,12 +249,12 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
             </thead>
             <tbody>
               {filteredTrucks.map(truck => (
-                <tr key={truck.id} className="border-b border-slate-100 hover:bg-slate-50">
+                <tr key={truck.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                   <td className="p-4 font-medium text-gray-800">{truck.plateNumber}</td>
                   <td className="p-4 text-gray-600">{truck.brand} {truck.model} ({truck.year})</td>
                   <td className="p-4 text-blue-600">{clients.find(c => c.id === truck.clientId)?.name}</td>
                   <td className="p-4">
-                    <span className={`px - 2 py - 1 rounded text - xs ${truck.size === 'Big' ? 'bg-purple-100 text-purple-700' : 'bg-teal-100 text-teal-700'} `}>
+                    <span className={`px-2 py-1 rounded text-xs ${truck.size === 'Big' ? 'bg-purple-100 text-purple-700' : 'bg-teal-100 text-teal-700'}`}>
                       Truck {truck.size}
                     </span>
                   </td>
@@ -222,35 +263,36 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
                       {truck.allocation || '-'}
                     </span>
                   </td>
-
                   <td className="p-4 text-right font-mono">{truck.currentOdometer.toLocaleString()}</td>
                   <td className="p-4 text-center">{getExpiryBadge(truck.stnkExpiry)}</td>
                   <td className="p-4 text-center">{getExpiryBadge(truck.tax5yearExpiry)}</td>
                   <td className="p-4 text-center">{getExpiryBadge(truck.kirExpiry)}</td>
                   <td className="p-4 text-right text-gray-500">Every {truck.serviceIntervalKm.toLocaleString()} KM</td>
                   <td className="p-4 text-center">
-                    <button
-                      onClick={() => handleOpenEdit(truck)}
-                      className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center justify-center gap-1"
-                      title="Edit / Atur Jadwal"
-                    >
-                      <Settings size={16} /> <span className="text-xs">Atur</span>
-                    </button>
-                    {onDeleteTruck && (
+                    <div className="flex items-center justify-center gap-1">
                       <button
-                        onClick={() => handleDeleteTruck(truck)}
-                        className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center justify-center gap-1"
-                        title="Hapus Truk"
+                        onClick={() => handleOpenEdit(truck)}
+                        className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                        title="Edit / Atur Jadwal"
                       >
-                        <Trash size={16} /> <span className="text-xs">Hapus</span>
+                        <Settings size={16} /> <span className="text-xs">Atur</span>
                       </button>
-                    )}
+                      {onDeleteTruck && (
+                        <button
+                          onClick={() => handleDeleteTruck(truck)}
+                          className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                          title="Hapus Truk"
+                        >
+                          <Trash2 size={16} /> <span className="text-xs">Hapus</span>
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
               {filteredTrucks.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="p-8 text-center text-gray-500">Data tidak ditemukan</td>
+                  <td colSpan={11} className="p-8 text-center text-gray-500">Data tidak ditemukan</td>
                 </tr>
               )}
             </tbody>
@@ -258,215 +300,206 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
         </div>
       </div>
 
+      {/* MODAL */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-              <h2 className="text-xl font-bold">{isEditing ? 'Edit Data & Jadwal Truk' : 'Tambah Data Truk'}</h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600">&times;</button>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="sticky top-0 bg-white z-10 p-5 border-b border-slate-100 flex justify-between items-center rounded-t-2xl">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
+                  <TruckIcon size={20} />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-800">{isEditing ? 'Edit Data & Jadwal Truk' : 'Tambah Data Truk Baru'}</h2>
+                  <p className="text-xs text-slate-400">Lengkapi informasi kendaraan di bawah ini</p>
+                </div>
+              </div>
+              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-400 hover:text-slate-600 cursor-pointer">
+                <X size={20} />
+              </button>
             </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-6">
 
-              {/* Basic Info */}
-              <div className="space-y-4">
-                <h3 className="font-semibold text-gray-800 border-b pb-2">Informasi Kendaraan</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">No Polisi</label>
-                    <input required className="w-full border p-2 rounded" value={formData.plateNumber || ''} onChange={e => setFormData({ ...formData, plateNumber: e.target.value })} placeholder="B 1234 CD" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Merk</label>
-                    <input required className="w-full border p-2 rounded" value={formData.brand || ''} onChange={e => setFormData({ ...formData, brand: e.target.value })} />
-                  </div>
+            <form onSubmit={handleSubmit} className="p-5 space-y-5">
+
+              {/* Section 1: Informasi Kendaraan */}
+              <div className="bg-slate-50 rounded-xl p-5 border border-slate-100">
+                <SectionHeader num={1} icon={TruckIcon} title="Informasi Kendaraan" subtitle="Data identitas utama armada" />
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <InputField label="No Polisi" icon={Hash} required placeholder="B 1234 CD" value={formData.plateNumber || ''} onChange={(e: any) => setFormData({ ...formData, plateNumber: e.target.value })} />
+                  <InputField label="Merk" required placeholder="Mitsubishi" value={formData.brand || ''} onChange={(e: any) => setFormData({ ...formData, brand: e.target.value })} />
+                  <InputField label="Model" required placeholder="Colt Diesel" value={formData.model || ''} onChange={(e: any) => setFormData({ ...formData, model: e.target.value })} />
+                  <InputField label="Tahun" type="number" required placeholder="2024" value={formData.year || ''} onChange={(e: any) => setFormData({ ...formData, year: parseInt(e.target.value) })} />
+                  <InputField label="No Mesin" placeholder="4D34-T12345" value={formData.engineNumber || ''} onChange={(e: any) => setFormData({ ...formData, engineNumber: e.target.value })} />
+                  <InputField label="No Rangka" placeholder="MHMFE74P5BK12345" value={formData.chassisNumber || ''} onChange={(e: any) => setFormData({ ...formData, chassisNumber: e.target.value })} />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Model</label>
-                    <input required className="w-full border p-2 rounded" value={formData.model || ''} onChange={e => setFormData({ ...formData, model: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Tahun</label>
-                    <input type="number" required className="w-full border p-2 rounded" value={formData.year || ''} onChange={e => setFormData({ ...formData, year: parseInt(e.target.value) })} />
-                  </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                  <SelectField label="Client" icon={Building2} required value={formData.clientId || ''} onChange={(e: any) => setFormData({ ...formData, clientId: e.target.value })}>
+                    <option value="">Pilih Client</option>
+                    {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </SelectField>
+                  <SelectField label="Ukuran" value={formData.size || 'Big'} onChange={(e: any) => setFormData({ ...formData, size: e.target.value as any })}>
+                    <option value="Small">Small</option>
+                    <option value="Big">Big</option>
+                  </SelectField>
+                  <SelectField label="Alokasi" icon={MapPin} value={formData.allocation || ''} onChange={(e: any) => setFormData({ ...formData, allocation: e.target.value || null })}>
+                    <option value="">-- Pilih --</option>
+                    {(ALLOCATION_OPTIONS[(formData.size as TruckSize) || 'Big'] || []).map(opt => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </SelectField>
+                  <InputField label="Odometer" icon={Gauge} type="number" required placeholder="0" value={formData.currentOdometer || ''} onChange={(e: any) => setFormData({ ...formData, currentOdometer: parseInt(e.target.value) })} />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">No Mesin</label>
-                    <input className="w-full border p-2 rounded" placeholder="Contoh: 4D34-T12345" value={formData.engineNumber || ''} onChange={e => setFormData({ ...formData, engineNumber: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">No Rangka</label>
-                    <input className="w-full border p-2 rounded" placeholder="Contoh: MHMFE74P5BK12345" value={formData.chassisNumber || ''} onChange={e => setFormData({ ...formData, chassisNumber: e.target.value })} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Client</label>
-                    <select className="w-full border p-2 rounded" required value={formData.clientId || ''} onChange={e => setFormData({ ...formData, clientId: e.target.value })}>
-                      <option value="">Pilih Client</option>
-                      {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Odometer Saat Ini</label>
-                    <input type="number" required className="w-full border p-2 rounded" value={formData.currentOdometer || ''} onChange={e => setFormData({ ...formData, currentOdometer: parseInt(e.target.value) })} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Ukuran</label>
-                    <select
-                      className="w-full border p-2 rounded"
-                      value={formData.size || 'Big'}
-                      onChange={e => setFormData({ ...formData, size: e.target.value as any })}
-                    >
-                      <option value="Small">Small</option>
-                      <option value="Big">Big</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Alokasi</label>
-                    <select
-                      className="w-full border p-2 rounded"
-                      value={formData.allocation || ''}
-                      onChange={e => setFormData({ ...formData, allocation: e.target.value || null })}
-                    >
-                      <option value="">-- Pilih Alokasi --</option>
-                      {(ALLOCATION_OPTIONS[(formData.size as TruckSize) || 'Big'] || []).map(opt => (
-                        <option key={opt} value={opt}>{opt}</option>
-                      ))}
-                    </select>
-                  </div>
+
+                <div className="mt-4">
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                    <span className="inline-flex items-center gap-1"><ClipboardList size={12} /> Deskripsi / Keterangan</span>
+                  </label>
+                  <textarea
+                    className="w-full border border-slate-200 bg-slate-50 focus:bg-white p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                    rows={2}
+                    placeholder="Catatan tambahan tentang truk..."
+                    value={formData.description || ''}
+                    onChange={e => setFormData({ ...formData, description: e.target.value })}
+                  />
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi / Keterangan</label>
-                <textarea
-                  className="w-full border p-2 rounded"
-                  rows={2}
-                  placeholder="Catatan tambahan tentang truk..."
-                  value={formData.description || ''}
-                  onChange={e => setFormData({ ...formData, description: e.target.value })}
-                />
-              </div>
 
-              {/* Dokumen Kendaraan */}
-              <div className="space-y-4">
-                <h3 className="font-semibold text-gray-800 border-b pb-2 flex items-center gap-2"><FileText size={16} /> Dokumen Kendaraan</h3>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Pajak STNK Tahunan</label>
-                    <input type="date" className="w-full border p-2 rounded" value={formData.stnkExpiry || ''} onChange={e => setFormData({ ...formData, stnkExpiry: e.target.value })} />
+              {/* Section 2: Dokumen Kendaraan */}
+              <div className="bg-slate-50 rounded-xl p-5 border border-slate-100">
+                <SectionHeader num={2} icon={FileText} title="Dokumen Kendaraan" subtitle="Masa berlaku dokumen resmi" />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-white p-4 rounded-xl border border-slate-200 hover:border-blue-200 transition-colors">
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                      <span className="inline-flex items-center gap-1"><Calendar size={12} /> Pajak STNK Tahunan</span>
+                    </label>
+                    <input type="date" className="w-full border border-slate-200 bg-slate-50 focus:bg-white p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={formData.stnkExpiry || ''} onChange={e => setFormData({ ...formData, stnkExpiry: e.target.value })} />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Pajak 5 Tahunan</label>
-                    <input type="date" className="w-full border p-2 rounded" value={formData.tax5yearExpiry || ''} onChange={e => setFormData({ ...formData, tax5yearExpiry: e.target.value })} />
+                  <div className="bg-white p-4 rounded-xl border border-slate-200 hover:border-blue-200 transition-colors">
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                      <span className="inline-flex items-center gap-1"><Calendar size={12} /> Pajak 5 Tahunan</span>
+                    </label>
+                    <input type="date" className="w-full border border-slate-200 bg-slate-50 focus:bg-white p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={formData.tax5yearExpiry || ''} onChange={e => setFormData({ ...formData, tax5yearExpiry: e.target.value })} />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Masa Berlaku KIR</label>
-                    <input type="date" className="w-full border p-2 rounded" value={formData.kirExpiry || ''} onChange={e => setFormData({ ...formData, kirExpiry: e.target.value })} />
+                  <div className="bg-white p-4 rounded-xl border border-slate-200 hover:border-blue-200 transition-colors">
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                      <span className="inline-flex items-center gap-1"><Calendar size={12} /> Masa Berlaku KIR</span>
+                    </label>
+                    <input type="date" className="w-full border border-slate-200 bg-slate-50 focus:bg-white p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={formData.kirExpiry || ''} onChange={e => setFormData({ ...formData, kirExpiry: e.target.value })} />
                   </div>
                 </div>
               </div>
 
-              {/* Default/General Service Schedule */}
-              <div className="space-y-4">
-                <h3 className="font-semibold text-gray-800 border-b pb-2">Jadwal Service Umum (Regular)</h3>
-                <div className="grid grid-cols-2 gap-4">
+              {/* Section 3: Jadwal Service Umum */}
+              <div className="bg-slate-50 rounded-xl p-5 border border-slate-100">
+                <SectionHeader num={3} icon={Clock} title="Jadwal Service Umum (Regular)" subtitle="Interval service berkala default" />
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <InputField label="Interval KM" type="number" required value={formData.serviceIntervalKm || ''} onChange={(e: any) => setFormData({ ...formData, serviceIntervalKm: parseInt(e.target.value) })} />
+                  <InputField label="Interval Bulan" type="number" required value={formData.serviceIntervalMonths || ''} onChange={(e: any) => setFormData({ ...formData, serviceIntervalMonths: parseInt(e.target.value) })} />
+                  <InputField label="Last Service KM" icon={Gauge} type="number" required value={formData.lastServiceOdometer || ''} onChange={(e: any) => setFormData({ ...formData, lastServiceOdometer: parseInt(e.target.value) })} />
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Interval KM</label>
-                    <input type="number" required className="w-full border p-2 rounded" value={formData.serviceIntervalKm || ''} onChange={e => setFormData({ ...formData, serviceIntervalKm: parseInt(e.target.value) })} />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Interval Bulan</label>
-                    <input type="number" required className="w-full border p-2 rounded" value={formData.serviceIntervalMonths || ''} onChange={e => setFormData({ ...formData, serviceIntervalMonths: parseInt(e.target.value) })} />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Last Service KM</label>
-                    <input type="number" required className="w-full border p-2 rounded" value={formData.lastServiceOdometer || ''} onChange={e => setFormData({ ...formData, lastServiceOdometer: parseInt(e.target.value) })} />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Last Service Date</label>
-                    <input type="date" required className="w-full border p-2 rounded" value={formData.lastServiceDate || ''} onChange={e => setFormData({ ...formData, lastServiceDate: e.target.value })} />
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                      <span className="inline-flex items-center gap-1"><Calendar size={12} /> Last Service Date</span>
+                    </label>
+                    <input type="date" required className="w-full border border-slate-200 bg-slate-50 focus:bg-white p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={formData.lastServiceDate || ''} onChange={e => setFormData({ ...formData, lastServiceDate: e.target.value })} />
                   </div>
                 </div>
               </div>
 
-              {/* Specific Schedules */}
-              <div className="space-y-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <h3 className="font-semibold text-gray-800 border-b pb-2 flex items-center justify-between">
-                  <span>Jadwal Khusus (Per Item)</span>
-                  <span className="text-xs font-normal text-gray-500">Contoh: Ganti Ban, Kampas Rem</span>
-                </h3>
+              {/* Section 4: Jadwal Khusus */}
+              <div className="bg-slate-50 rounded-xl p-5 border border-slate-100">
+                <SectionHeader num={4} icon={Wrench} title="Jadwal Khusus (Per Item)" subtitle="Contoh: Ganti Ban, Kampas Rem, dll" />
 
-                {/* List Existing Schedules */}
+                {/* Existing Schedules */}
                 {formData.schedules && formData.schedules.length > 0 ? (
-                  <div className="space-y-2">
+                  <div className="space-y-2 mb-4">
                     {formData.schedules.map((sch) => (
-                      <div key={sch.id} className="flex items-center justify-between bg-white p-3 rounded border shadow-sm">
-                        <div>
-                          <p className="font-bold text-sm text-blue-700">{sch.serviceName}</p>
-                          <p className="text-xs text-gray-500">
-                            Setiap {sch.intervalKm.toLocaleString()} KM / {sch.intervalMonths} Bulan
-                          </p>
+                      <div key={sch.id} className="flex items-center justify-between bg-white p-3 rounded-xl border border-slate-200 hover:border-blue-200 transition-colors group">
+                        <div className="flex items-center gap-3">
+                          <div className="p-1.5 bg-blue-100 rounded-lg text-blue-600">
+                            <Wrench size={14} />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-sm text-slate-800">{sch.serviceName}</p>
+                            <p className="text-[11px] text-slate-400">
+                              Setiap {sch.intervalKm.toLocaleString()} KM / {sch.intervalMonths} Bulan
+                            </p>
+                          </div>
                         </div>
                         <button
                           type="button"
                           onClick={() => handleRemoveSchedule(sch.id)}
-                          className="text-red-500 hover:text-red-700 p-1"
+                          className="text-slate-300 hover:text-red-500 p-1.5 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
                         >
-                          <Trash size={16} />
+                          <Trash2 size={16} />
                         </button>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-500 italic">Belum ada jadwal khusus.</p>
+                  <div className="mb-4 p-4 bg-white border-2 border-dashed border-slate-200 rounded-xl text-center">
+                    <Wrench size={24} className="mx-auto text-slate-300 mb-1" />
+                    <p className="text-sm text-slate-400">Belum ada jadwal khusus</p>
+                  </div>
                 )}
 
-                {/* Add New Schedule Form */}
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <label className="text-xs font-bold text-gray-600 uppercase mb-2 block">Tambah Jadwal Baru</label>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                {/* Add New Schedule */}
+                <div className="bg-white p-4 rounded-xl border border-slate-200">
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3 block">Tambah Jadwal Baru</label>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
                     <input
                       type="text"
                       placeholder="Nama (Mis: Ganti Ban)"
-                      className="border p-2 rounded text-sm"
+                      className="border border-slate-200 bg-slate-50 focus:bg-white p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all md:col-span-1"
                       value={newSchedule.serviceName}
                       onChange={e => setNewSchedule({ ...newSchedule, serviceName: e.target.value })}
                     />
-                    <div className="flex gap-2">
-                      <input
-                        type="number"
-                        placeholder="KM Interval"
-                        className="border p-2 rounded text-sm w-full"
-                        value={newSchedule.intervalKm}
-                        onChange={e => setNewSchedule({ ...newSchedule, intervalKm: parseInt(e.target.value) })}
-                      />
-                      <input
-                        type="number"
-                        placeholder="Bulan"
-                        className="border p-2 rounded text-sm w-full"
-                        value={newSchedule.intervalMonths}
-                        onChange={e => setNewSchedule({ ...newSchedule, intervalMonths: parseInt(e.target.value) })}
-                      />
-                    </div>
+                    <input
+                      type="number"
+                      placeholder="KM Interval"
+                      className="border border-slate-200 bg-slate-50 focus:bg-white p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                      value={newSchedule.intervalKm}
+                      onChange={e => setNewSchedule({ ...newSchedule, intervalKm: parseInt(e.target.value) })}
+                    />
+                    <input
+                      type="number"
+                      placeholder="Bulan"
+                      className="border border-slate-200 bg-slate-50 focus:bg-white p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                      value={newSchedule.intervalMonths}
+                      onChange={e => setNewSchedule({ ...newSchedule, intervalMonths: parseInt(e.target.value) })}
+                    />
                     <button
                       type="button"
                       onClick={handleAddSchedule}
-                      className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm flex items-center justify-center gap-1"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2.5 rounded-lg text-sm flex items-center justify-center gap-1.5 font-medium transition-colors cursor-pointer"
                     >
-                      <Plus size={14} /> Tambah
+                      <Plus size={15} /> Tambah
                     </button>
                   </div>
                 </div>
               </div>
 
-              <div className="pt-4 flex justify-end gap-2">
-                <button type="button" onClick={() => setIsModalOpen(false)} disabled={isSubmitting} className="px-4 py-2 text-gray-600 bg-gray-100 rounded hover:bg-gray-200 disabled:opacity-50">Batal</button>
-                <button type="submit" disabled={isSubmitting} className="px-4 py-2 text-white bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
-                  {isSubmitting ? <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Menyimpan...</> : 'Simpan Data'}
+              {/* Footer Buttons */}
+              <div className="flex justify-between items-center pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  disabled={isSubmitting}
+                  className="px-5 py-2.5 text-slate-500 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 font-medium disabled:opacity-50 transition-all cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-8 py-2.5 text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl hover:from-blue-700 hover:to-indigo-700 flex items-center gap-2 font-semibold shadow-lg shadow-blue-200 disabled:opacity-50 transition-all cursor-pointer"
+                >
+                  {isSubmitting ? (
+                    <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Menyimpan...</>
+                  ) : (
+                    <><Save size={18} /> Simpan Data</>
+                  )}
                 </button>
               </div>
             </form>
