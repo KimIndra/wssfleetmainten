@@ -84,7 +84,7 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
   const initialFormState: Partial<Truck> = {
     size: 'Big',
     serviceIntervalKm: 10000,
-    serviceIntervalMonths: 6,
+    serviceIntervalMonths: 3,
     currentOdometer: 0,
     lastServiceOdometer: 0,
     schedules: []
@@ -94,7 +94,7 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
   const [newSchedule, setNewSchedule] = useState<Partial<ServiceSchedule>>({
     serviceName: '',
     intervalKm: 10000,
-    intervalMonths: 6
+    intervalMonths: 3
   });
 
   const filteredTrucks = trucks.filter(truck => {
@@ -134,7 +134,7 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
         id: `sch-${Date.now()}`,
         serviceName: newSchedule.serviceName,
         intervalKm: newSchedule.intervalKm,
-        intervalMonths: newSchedule.intervalMonths || 6,
+        intervalMonths: newSchedule.intervalMonths || 3,
         lastServiceDate: new Date().toISOString().split('T')[0],
         lastServiceOdometer: formData.currentOdometer || 0
       };
@@ -142,7 +142,7 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
         ...formData,
         schedules: [...(formData.schedules || []), scheduleToAdd]
       });
-      setNewSchedule({ serviceName: '', intervalKm: 10000, intervalMonths: 6 });
+      setNewSchedule({ serviceName: '', intervalKm: 10000, intervalMonths: 3 });
     }
   };
 
