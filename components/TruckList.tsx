@@ -79,7 +79,7 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
   const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 15;
+  const ITEMS_PER_PAGE = 9;
 
   const initialFormState: Partial<Truck> = {
     size: 'Big',
@@ -331,8 +331,8 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
                   key={page}
                   onClick={() => setCurrentPage(page)}
                   className={`w-8 h-8 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${page === safePage
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'text-slate-500 hover:bg-white hover:text-blue-600 border border-slate-200'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-slate-500 hover:bg-white hover:text-blue-600 border border-slate-200'
                     }`}
                 >
                   {page}
