@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { ServiceRecord, Truck } from '../types';
-import { formatCurrency, exportToCSV } from '../utils';
+import { formatCurrency, exportToCSV, exportToExcel } from '../utils';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell, AreaChart, Area
@@ -114,6 +114,21 @@ const Reports: React.FC<ReportsProps> = ({ services, trucks }) => {
       'Biaya Jasa': s.laborCost,
       'Total Biaya': s.totalCost
     }));
+    exportToExcel(dataToExport, `Laporan_Service_${yearFilter}_${monthFilter}`, 'Laporan Service');
+  };
+
+  const handleExportCSV = () => {
+    const dataToExport = filteredServices.map(s => ({
+      ID: s.id,
+      Tanggal: s.serviceDate,
+      'No Polisi': trucks.find(t => t.id === s.truckId)?.plateNumber || 'Unknown',
+      Mekanik: s.mechanic,
+      'Jenis Service': s.serviceTypes.join(', '),
+      Deskripsi: s.description,
+      'Biaya Parts': s.parts.reduce((sum, p) => sum + p.price * p.quantity, 0),
+      'Biaya Jasa': s.laborCost,
+      'Total Biaya': s.totalCost
+    }));
     exportToCSV(dataToExport, `Laporan_Service_${yearFilter}_${monthFilter}`);
   };
 
@@ -184,8 +199,11 @@ const Reports: React.FC<ReportsProps> = ({ services, trucks }) => {
             </select>
           </div>
 
-          <button onClick={handleExportExcel} className="flex items-center gap-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 px-4 py-2 rounded-xl shadow-sm transition-all text-sm font-medium cursor-pointer hover:border-green-300 group">
-            <FileSpreadsheet size={16} className="text-slate-400 group-hover:text-green-600 transition-colors" /> Export
+          <button onClick={handleExportExcel} className="flex items-center gap-2 bg-white hover:bg-emerald-50 border border-slate-200 text-slate-700 px-4 py-2 rounded-xl shadow-sm transition-all text-sm font-medium cursor-pointer hover:border-green-300 group" title="Download file Excel (.xlsx)">
+            <FileSpreadsheet size={16} className="text-slate-400 group-hover:text-green-600 transition-colors" /> Excel
+          </button>
+          <button onClick={handleExportCSV} className="flex items-center gap-2 bg-white hover:bg-blue-50 border border-slate-200 text-slate-700 px-4 py-2 rounded-xl shadow-sm transition-all text-sm font-medium cursor-pointer hover:border-blue-300 group" title="Download file CSV">
+            <Download size={16} className="text-slate-400 group-hover:text-blue-600 transition-colors" /> CSV
           </button>
           <button onClick={() => window.print()} className="flex items-center gap-2 bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-700 hover:to-slate-800 text-white px-4 py-2 rounded-xl shadow-md transition-all text-sm font-medium cursor-pointer">
             <Printer size={16} /> Print

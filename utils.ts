@@ -28,12 +28,12 @@ export const getNextServiceInfo = (
 ) => {
   const nextDate = addMonths(parseISO(lastDate), intervalMonths);
   const nextOdo = lastOdo + intervalKm;
-  
+
   const daysUntil = Math.ceil((nextDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
   const kmUntil = nextOdo - currentOdo;
 
   let status: 'ok' | 'warning' | 'overdue' = 'ok';
-  
+
   if (daysUntil < 0 || kmUntil < 0) {
     status = 'overdue';
   } else if (daysUntil < 14 || kmUntil < 1000) {
@@ -126,4 +126,25 @@ export const exportToCSV = <T extends Record<string, any>>(data: T[], filename: 
     link.click();
     document.body.removeChild(link);
   }
+};
+
+export const exportToExcel = <T extends Record<string, any>>(data: T[], filename: string, sheetName: string = 'Sheet1') => {
+  if (data.length === 0) return;
+
+  const XLSX = require('xlsx');
+  const worksheet = XLSX.utils.json_to_sheet(data);
+
+  // Auto-size columns
+  const colWidths = Object.keys(data[0]).map(key => {
+    const maxLen = Math.max(
+      key.length,
+      ...data.map(row => String(row[key] ?? '').length)
+    );
+    return { wch: Math.min(maxLen + 2, 40) };
+  });
+  worksheet['!cols'] = colWidths;
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+  XLSX.writeFile(workbook, `${filename}.xlsx`);
 };
