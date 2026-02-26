@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { ServiceRecord, Truck } from '../types';
-import { formatCurrency, exportToCSV, exportToExcel } from '../utils';
+import { formatCurrency, exportToExcel } from '../utils';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell, AreaChart, Area
@@ -8,7 +10,7 @@ import {
 import {
   Download, Printer, TrendingUp, TrendingDown, DollarSign, Wrench, AlertCircle, Calendar,
   FileBarChart, PieChart as PieChartIcon, ArrowUpRight, ArrowDownRight, BarChart3,
-  FileSpreadsheet, Table2, Filter
+  FileSpreadsheet, FileText, Table2, Filter
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 
@@ -117,19 +119,54 @@ const Reports: React.FC<ReportsProps> = ({ services, trucks }) => {
     exportToExcel(dataToExport, `Laporan_Service_${yearFilter}_${monthFilter}`, 'Laporan Service');
   };
 
-  const handleExportCSV = () => {
-    const dataToExport = filteredServices.map(s => ({
-      ID: s.id,
-      Tanggal: s.serviceDate,
-      'No Polisi': trucks.find(t => t.id === s.truckId)?.plateNumber || 'Unknown',
-      Mekanik: s.mechanic,
-      'Jenis Service': s.serviceTypes.join(', '),
-      Deskripsi: s.description,
-      'Biaya Parts': s.parts.reduce((sum, p) => sum + p.price * p.quantity, 0),
-      'Biaya Jasa': s.laborCost,
-      'Total Biaya': s.totalCost
-    }));
-    exportToCSV(dataToExport, `Laporan_Service_${yearFilter}_${monthFilter}`);
+  const handleExportPDF = () => {
+    if (filteredServices.length === 0) {
+      alert('Tidak ada data untuk diekspor.');
+      return;
+    }
+
+    const doc = new jsPDF({ orientation: 'landscape' });
+
+    // Header
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Laporan Service Armada', 14, 18);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100);
+    const filterLabel = monthFilter === 'all' ? `Semua Bulan ${yearFilter}` : `Bulan ${monthFilter} / ${yearFilter}`;
+    doc.text(`Periode: ${filterLabel}  |  Total: ${filteredServices.length} service  |  Dicetak: ${new Date().toLocaleDateString('id-ID')}`, 14, 25);
+
+    // Table
+    const tableData = filteredServices.map((s, idx) => [
+      idx + 1,
+      s.serviceDate,
+      trucks.find(t => t.id === s.truckId)?.plateNumber || '-',
+      s.mechanic || '-',
+      s.serviceTypes.join(', '),
+      formatCurrency(s.parts.reduce((sum, p) => sum + p.price * p.quantity, 0)),
+      formatCurrency(s.laborCost),
+      formatCurrency(s.totalCost)
+    ]);
+
+    autoTable(doc, {
+      startY: 32,
+      head: [['No', 'Tanggal', 'No Polisi', 'Mekanik', 'Jenis Service', 'Biaya Parts', 'Biaya Jasa', 'Total']],
+      body: tableData,
+      foot: [['', '', '', '', 'TOTAL', formatCurrency(totalPartsCost), formatCurrency(totalLaborCost), formatCurrency(totalCost)]],
+      styles: { fontSize: 8, cellPadding: 3 },
+      headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
+      footStyles: { fillColor: [241, 245, 249], textColor: [30, 41, 59], fontStyle: 'bold', fontSize: 9 },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 12 },
+        5: { halign: 'right' },
+        6: { halign: 'right' },
+        7: { halign: 'right' },
+      },
+    });
+
+    doc.save(`Laporan_Service_${yearFilter}_${monthFilter}.pdf`);
   };
 
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -202,8 +239,8 @@ const Reports: React.FC<ReportsProps> = ({ services, trucks }) => {
           <button onClick={handleExportExcel} className="flex items-center gap-2 bg-white hover:bg-emerald-50 border border-slate-200 text-slate-700 px-4 py-2 rounded-xl shadow-sm transition-all text-sm font-medium cursor-pointer hover:border-green-300 group" title="Download file Excel (.xlsx)">
             <FileSpreadsheet size={16} className="text-slate-400 group-hover:text-green-600 transition-colors" /> Excel
           </button>
-          <button onClick={handleExportCSV} className="flex items-center gap-2 bg-white hover:bg-blue-50 border border-slate-200 text-slate-700 px-4 py-2 rounded-xl shadow-sm transition-all text-sm font-medium cursor-pointer hover:border-blue-300 group" title="Download file CSV">
-            <Download size={16} className="text-slate-400 group-hover:text-blue-600 transition-colors" /> CSV
+          <button onClick={handleExportPDF} className="flex items-center gap-2 bg-white hover:bg-red-50 border border-slate-200 text-slate-700 px-4 py-2 rounded-xl shadow-sm transition-all text-sm font-medium cursor-pointer hover:border-red-300 group" title="Download file PDF">
+            <FileText size={16} className="text-slate-400 group-hover:text-red-600 transition-colors" /> PDF
           </button>
           <button onClick={() => window.print()} className="flex items-center gap-2 bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-700 hover:to-slate-800 text-white px-4 py-2 rounded-xl shadow-md transition-all text-sm font-medium cursor-pointer">
             <Printer size={16} /> Print
