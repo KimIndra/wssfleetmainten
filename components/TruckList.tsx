@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Truck, Client, ServiceSchedule, TruckSize } from '../types';
-import { Settings, Plus, Trash2, FileText, Search, Truck as TruckIcon, Calendar, Gauge, Building2, Hash, ClipboardList, Clock, Save, X, ChevronDown, MapPin, Wrench } from 'lucide-react';
+import { Settings, Plus, Trash2, FileText, Search, Truck as TruckIcon, Calendar, Gauge, Building2, Hash, ClipboardList, Clock, Save, X, ChevronDown, MapPin, Wrench, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const ALLOCATION_OPTIONS: Record<TruckSize, string[]> = {
   Big: ['Kurere', 'Depo', 'Dam CBT', 'Dongjin'],
@@ -78,6 +78,8 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 15;
 
   const initialFormState: Partial<Truck> = {
     size: 'Big',
@@ -102,6 +104,17 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
       truck.brand.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesClient && matchesSize && matchesSearch;
   });
+
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(filteredTrucks.length / ITEMS_PER_PAGE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedTrucks = filteredTrucks.slice((safePage - 1) * ITEMS_PER_PAGE, safePage * ITEMS_PER_PAGE);
+
+  // Reset to page 1 when filters change
+  const handleFilterChange = (setter: (val: string) => void, val: string) => {
+    setter(val);
+    setCurrentPage(1);
+  };
 
   const handleOpenAdd = () => {
     setFormData(initialFormState);
@@ -206,13 +219,13 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
             placeholder="Cari No Polisi / Merk..."
             className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-slate-50 focus:bg-white transition-all"
             value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
+            onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
           />
         </div>
         <select
           className="border border-slate-200 rounded-lg py-2 px-3 outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 focus:bg-white transition-all cursor-pointer"
           value={filterClient}
-          onChange={e => setFilterClient(e.target.value)}
+          onChange={e => handleFilterChange(setFilterClient, e.target.value)}
         >
           <option value="all">Semua Client</option>
           {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -220,7 +233,7 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
         <select
           className="border border-slate-200 rounded-lg py-2 px-3 outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 focus:bg-white transition-all cursor-pointer"
           value={filterSize}
-          onChange={e => setFilterSize(e.target.value)}
+          onChange={e => handleFilterChange(setFilterSize, e.target.value)}
         >
           <option value="all">Semua Ukuran</option>
           <option value="Small">Kecil (Small)</option>
@@ -248,7 +261,7 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
               </tr>
             </thead>
             <tbody>
-              {filteredTrucks.map(truck => (
+              {paginatedTrucks.map(truck => (
                 <tr key={truck.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                   <td className="p-4 font-medium text-gray-800">{truck.plateNumber}</td>
                   <td className="p-4 text-gray-600">{truck.brand} {truck.model} ({truck.year})</td>
@@ -298,6 +311,43 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Footer */}
+        {filteredTrucks.length > ITEMS_PER_PAGE && (
+          <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100 bg-slate-50">
+            <p className="text-xs text-slate-500">
+              Menampilkan <span className="font-semibold text-slate-700">{(safePage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(safePage * ITEMS_PER_PAGE, filteredTrucks.length)}</span> dari <span className="font-semibold text-slate-700">{filteredTrucks.length}</span> data
+            </p>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={safePage === 1}
+                className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-white hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`w-8 h-8 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${page === safePage
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-slate-500 hover:bg-white hover:text-blue-600 border border-slate-200'
+                    }`}
+                >
+                  {page}
+                </button>
+              ))}
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={safePage === totalPages}
+                className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-white hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* MODAL */}
