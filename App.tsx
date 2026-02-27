@@ -12,6 +12,13 @@ import { api } from './lib/api';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewState>('dashboard');
+  const [docFilter, setDocFilter] = useState<string | null>(null);
+
+  // Clear docFilter when navigating via sidebar
+  const handleViewChange = (view: ViewState) => {
+    setCurrentView(view);
+    setDocFilter(null);
+  };
 
   // App State (from Database)
   const [trucks, setTrucks] = useState<Truck[]>([]);
@@ -126,7 +133,7 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch (currentView) {
       case 'dashboard':
-        return <Dashboard trucks={trucks} services={services} onNavigate={setCurrentView} />;
+        return <Dashboard trucks={trucks} services={services} onNavigate={(view, filter) => { setDocFilter(filter ?? null); setCurrentView(view); }} />;
       case 'monitoring':
         return <Monitoring trucks={trucks} onUpdateOdometer={handleUpdateOdometer} />;
       case 'input-service':
@@ -144,6 +151,8 @@ const App: React.FC = () => {
             onAddTruck={handleAddTruck}
             onEditTruck={handleEditTruck}
             onDeleteTruck={handleDeleteTruck}
+            docFilter={docFilter}
+            onClearDocFilter={() => setDocFilter(null)}
           />
         );
       case 'history':
@@ -171,7 +180,7 @@ const App: React.FC = () => {
 
   return (
     <div className="flex bg-slate-100 min-h-screen">
-      <Sidebar currentView={currentView} onViewChange={setCurrentView} />
+      <Sidebar currentView={currentView} onViewChange={handleViewChange} />
       <main className="flex-1 ml-64">
         {renderContent()}
       </main>

@@ -17,7 +17,7 @@ import { formatCurrency, getNextServiceInfo } from '../utils';
 interface DashboardProps {
   trucks: Truck[];
   services: ServiceRecord[];
-  onNavigate?: (view: ViewState) => void;
+  onNavigate?: (view: ViewState, docFilter?: string) => void;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ trucks, services, onNavigate }) => {
@@ -166,7 +166,7 @@ const Dashboard: React.FC<DashboardProps> = ({ trucks, services, onNavigate }) =
       {/* 3. Document Warning Cards Section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div
-          onClick={() => onNavigate?.('trucks')}
+          onClick={() => docStats.stnkExpired > 0 ? onNavigate?.('trucks', 'stnk-expired') : onNavigate?.('trucks')}
           className={`p-5 rounded-xl shadow-sm border flex justify-between items-center cursor-pointer hover:shadow-md transition-all group ${docStats.stnkExpired > 0 ? 'bg-red-50 border-red-200 hover:border-red-300' : 'bg-white border-slate-100 hover:border-blue-200'}`}
         >
           <div className="flex items-center space-x-4">
@@ -186,7 +186,7 @@ const Dashboard: React.FC<DashboardProps> = ({ trucks, services, onNavigate }) =
         </div>
 
         <div
-          onClick={() => onNavigate?.('trucks')}
+          onClick={() => docStats.tax5Expired > 0 ? onNavigate?.('trucks', 'tax5-expired') : onNavigate?.('trucks')}
           className={`p-5 rounded-xl shadow-sm border flex justify-between items-center cursor-pointer hover:shadow-md transition-all group ${docStats.tax5Expired > 0 ? 'bg-red-50 border-red-200 hover:border-red-300' : 'bg-white border-slate-100 hover:border-blue-200'}`}
         >
           <div className="flex items-center space-x-4">
@@ -206,7 +206,7 @@ const Dashboard: React.FC<DashboardProps> = ({ trucks, services, onNavigate }) =
         </div>
 
         <div
-          onClick={() => onNavigate?.('trucks')}
+          onClick={() => docStats.kirExpired > 0 ? onNavigate?.('trucks', 'kir-expired') : onNavigate?.('trucks')}
           className={`p-5 rounded-xl shadow-sm border flex justify-between items-center cursor-pointer hover:shadow-md transition-all group ${docStats.kirExpired > 0 ? 'bg-red-50 border-red-200 hover:border-red-300' : 'bg-white border-slate-100 hover:border-blue-200'}`}
         >
           <div className="flex items-center space-x-4">

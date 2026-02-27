@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Truck, Client, ServiceSchedule, TruckSize } from '../types';
-import { Settings, Plus, Trash2, FileText, Search, Truck as TruckIcon, Calendar, Gauge, Building2, Hash, ClipboardList, Clock, Save, X, ChevronDown, MapPin, Wrench, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Settings, Plus, Trash2, FileText, Search, Truck as TruckIcon, Calendar, Gauge, Building2, Hash, ClipboardList, Clock, Save, X, ChevronDown, MapPin, Wrench, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
 
 const ALLOCATION_OPTIONS: Record<TruckSize, string[]> = {
   Big: ['Kurere', 'Depo', 'Dam CBT', 'Dongjin'],
@@ -60,9 +60,11 @@ interface TruckListProps {
   onAddTruck: (truck: Truck) => Promise<void>;
   onEditTruck: (truck: Truck) => Promise<void>;
   onDeleteTruck?: (truckId: string) => Promise<void>;
+  docFilter?: string | null;
+  onClearDocFilter?: () => void;
 }
 
-const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEditTruck, onDeleteTruck }) => {
+const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEditTruck, onDeleteTruck, docFilter, onClearDocFilter }) => {
   const getExpiryBadge = (dateStr?: string | null) => {
     if (!dateStr) return <span className="text-xs text-gray-400 italic">Belum diisi</span>;
     const today = new Date();
@@ -102,6 +104,19 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
     const matchesSize = filterSize === 'all' || truck.size === filterSize;
     const matchesSearch = truck.plateNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       truck.brand.toLowerCase().includes(searchTerm.toLowerCase());
+
+    // Doc expiry filter from Dashboard
+    if (docFilter) {
+      const today = new Date();
+      const isExpired = (dateStr?: string | null) => {
+        if (!dateStr) return true; // treat missing as expired
+        return new Date(dateStr) < today;
+      };
+      if (docFilter === 'stnk-expired' && !isExpired(truck.stnkExpiry)) return false;
+      if (docFilter === 'tax5-expired' && !isExpired(truck.tax5yearExpiry)) return false;
+      if (docFilter === 'kir-expired' && !isExpired(truck.kirExpiry)) return false;
+    }
+
     return matchesClient && matchesSize && matchesSearch;
   });
 
@@ -209,6 +224,25 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
           <Plus size={18} /> Tambah Truk
         </button>
       </div>
+
+      {/* Active Doc Filter Banner */}
+      {docFilter && (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-5 py-3 mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-red-700">
+            <AlertTriangle size={18} />
+            <span className="text-sm font-medium">
+              Menampilkan armada dengan {docFilter === 'stnk-expired' ? 'STNK Tahunan' : docFilter === 'tax5-expired' ? 'Pajak 5 Tahunan' : 'KIR'} <span className="font-bold">Expired</span>
+            </span>
+            <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded-full text-xs font-bold">{filteredTrucks.length} unit</span>
+          </div>
+          <button
+            onClick={onClearDocFilter}
+            className="text-sm text-red-600 hover:text-red-800 hover:bg-red-100 px-3 py-1 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+          >
+            <X size={14} /> Hapus Filter
+          </button>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-6 grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-4">
