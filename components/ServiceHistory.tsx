@@ -42,10 +42,12 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onDel
     const matchesMonth = (() => {
       if (filterMonth === 'all') return true;
       const m = date.getMonth() + 1;
-      if (filterMonth === 'q1') return m >= 1 && m <= 3;
-      if (filterMonth === 'q2') return m >= 4 && m <= 6;
-      if (filterMonth === 'q3') return m >= 7 && m <= 9;
-      if (filterMonth === 'q4') return m >= 10 && m <= 12;
+      // 3-month period: p1 = Jan-Mar, p2 = Feb-Apr, ... p12 = Dec-Feb
+      if (filterMonth.startsWith('p')) {
+        const start = parseInt(filterMonth.substring(1));
+        const months = [start, (start % 12) + 1, ((start + 1) % 12) + 1];
+        return months.includes(m);
+      }
       return m.toString() === filterMonth;
     })();
 
@@ -154,11 +156,19 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onDel
             onChange={e => setFilterMonth(e.target.value)}
           >
             <option value="all">Semua Bulan</option>
-            <optgroup label="Kuartal / Per 3 Bulan">
-              <option value="q1">Q1 (Januari - Maret)</option>
-              <option value="q2">Q2 (April - Juni)</option>
-              <option value="q3">Q3 (Juli - September)</option>
-              <option value="q4">Q4 (Oktober - Desember)</option>
+            <optgroup label="Periode 3 Bulan">
+              <option value="p1">Januari - Maret</option>
+              <option value="p2">Februari - April</option>
+              <option value="p3">Maret - Mei</option>
+              <option value="p4">April - Juni</option>
+              <option value="p5">Mei - Juli</option>
+              <option value="p6">Juni - Agustus</option>
+              <option value="p7">Juli - September</option>
+              <option value="p8">Agustus - Oktober</option>
+              <option value="p9">September - November</option>
+              <option value="p10">Oktober - Desember</option>
+              <option value="p11">November - Januari</option>
+              <option value="p12">Desember - Februari</option>
             </optgroup>
             <optgroup label="Bulan Spesifik">
               <option value="1">Januari</option>
