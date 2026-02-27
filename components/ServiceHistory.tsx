@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { ServiceRecord, Truck } from '../types';
 import { formatDate, formatCurrency, exportToCSV } from '../utils';
-import { ChevronDown, ChevronUp, Trash, Download } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash, Download, Search } from 'lucide-react';
 
 interface ServiceHistoryProps {
   services: ServiceRecord[];
@@ -21,17 +21,28 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onDel
   const [filterType, setFilterType] = useState('all');
   const [filterMonth, setFilterMonth] = useState('all');
   const [filterYear, setFilterYear] = useState('all');
+  const [filterPlate, setFilterPlate] = useState('all');
+  const [filterAllocation, setFilterAllocation] = useState('all');
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
   // Derive available years
   const years = Array.from(new Set(services.map(s => s.serviceDate.split('-')[0]))).sort();
 
+  // Derive unique plate numbers and allocations from trucks that have services
+  const truckIdsWithServices = new Set(services.map(s => s.truckId));
+  const trucksWithServices = trucks.filter(t => truckIdsWithServices.has(t.id));
+  const plateNumbers = Array.from(new Set(trucksWithServices.map(t => t.plateNumber))).sort();
+  const allocations = Array.from(new Set(trucksWithServices.map(t => t.allocation).filter(Boolean) as string[])).sort();
+
   const filteredServices = services.filter(service => {
     const date = new Date(service.serviceDate);
+    const truck = trucks.find(t => t.id === service.truckId);
     const matchesType = filterType === 'all' || service.serviceTypes.includes(filterType);
     const matchesMonth = filterMonth === 'all' || (date.getMonth() + 1).toString() === filterMonth;
     const matchesYear = filterYear === 'all' || date.getFullYear().toString() === filterYear;
-    return matchesType && matchesMonth && matchesYear;
+    const matchesPlate = filterPlate === 'all' || truck?.plateNumber === filterPlate;
+    const matchesAllocation = filterAllocation === 'all' || truck?.allocation === filterAllocation;
+    return matchesType && matchesMonth && matchesYear && matchesPlate && matchesAllocation;
   });
 
   const toggleExpand = (id: string) => {
@@ -82,11 +93,39 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onDel
         </button>
       </div>
 
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <div className="flex flex-col">
-          <label className="text-xs text-gray-500 mb-1">Filter Kategori</label>
+          <label className="text-xs text-gray-500 mb-1">No Polisi</label>
           <select
-            className="border border-gray-300 rounded-lg py-2 px-3 outline-none"
+            className="border border-slate-200 rounded-lg py-2 px-3 outline-none bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
+            value={filterPlate}
+            onChange={e => setFilterPlate(e.target.value)}
+          >
+            <option value="all">Semua No Polisi</option>
+            {plateNumbers.map(p => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-col">
+          <label className="text-xs text-gray-500 mb-1">Alokasi</label>
+          <select
+            className="border border-slate-200 rounded-lg py-2 px-3 outline-none bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
+            value={filterAllocation}
+            onChange={e => setFilterAllocation(e.target.value)}
+          >
+            <option value="all">Semua Alokasi</option>
+            {allocations.map(a => (
+              <option key={a} value={a}>{a}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-col">
+          <label className="text-xs text-gray-500 mb-1">Kategori</label>
+          <select
+            className="border border-slate-200 rounded-lg py-2 px-3 outline-none bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
             value={filterType}
             onChange={e => setFilterType(e.target.value)}
           >
@@ -98,9 +137,9 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onDel
         </div>
 
         <div className="flex flex-col">
-          <label className="text-xs text-gray-500 mb-1">Filter Bulan</label>
+          <label className="text-xs text-gray-500 mb-1">Bulan</label>
           <select
-            className="border border-gray-300 rounded-lg py-2 px-3 outline-none"
+            className="border border-slate-200 rounded-lg py-2 px-3 outline-none bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
             value={filterMonth}
             onChange={e => setFilterMonth(e.target.value)}
           >
@@ -121,9 +160,9 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onDel
         </div>
 
         <div className="flex flex-col">
-          <label className="text-xs text-gray-500 mb-1">Filter Tahun</label>
+          <label className="text-xs text-gray-500 mb-1">Tahun</label>
           <select
-            className="border border-gray-300 rounded-lg py-2 px-3 outline-none"
+            className="border border-slate-200 rounded-lg py-2 px-3 outline-none bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
             value={filterYear}
             onChange={e => setFilterYear(e.target.value)}
           >
@@ -140,7 +179,8 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onDel
               <tr>
                 <th className="p-4 w-10"></th>
                 <th className="p-4 font-semibold">Tanggal</th>
-                <th className="p-4 font-semibold">Truk</th>
+                <th className="p-4 font-semibold">No Polisi</th>
+                <th className="p-4 font-semibold">Alokasi</th>
                 <th className="p-4 font-semibold">Jenis Service</th>
                 <th className="p-4 font-semibold">Mekanik</th>
                 <th className="p-4 font-semibold text-right">Total Biaya</th>
@@ -163,6 +203,11 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onDel
                       <td className="p-4 text-gray-800">{formatDate(service.serviceDate)}</td>
                       <td className="p-4 font-medium text-gray-800">{truck?.plateNumber || '-'}</td>
                       <td className="p-4">
+                        <span className="px-2 py-1 rounded text-xs bg-indigo-100 text-indigo-700">
+                          {truck?.allocation || '-'}
+                        </span>
+                      </td>
+                      <td className="p-4">
                         <div className="flex flex-wrap gap-1">
                           {service.serviceTypes.map((type, idx) => (
                             <span key={idx} className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs whitespace-nowrap">
@@ -176,7 +221,7 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onDel
                     </tr>
                     {isExpanded && (
                       <tr className="bg-slate-50 border-b border-slate-200">
-                        <td colSpan={6} className="p-4">
+                        <td colSpan={7} className="p-4">
                           <div className="bg-white rounded border border-slate-200 p-4">
                             <h4 className="font-semibold text-gray-700 mb-3 border-b pb-2">Detail Pembayaran & Suku Cadang</h4>
                             <p className="text-gray-600 mb-3 text-sm italic">{service.description}</p>
