@@ -21,7 +21,7 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onDel
   const [filterType, setFilterType] = useState('all');
   const [filterMonth, setFilterMonth] = useState('all');
   const [filterYear, setFilterYear] = useState('all');
-  const [filterPlate, setFilterPlate] = useState('all');
+  const [filterPlate, setFilterPlate] = useState('');
   const [filterAllocation, setFilterAllocation] = useState('all');
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
@@ -40,7 +40,7 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onDel
     const matchesType = filterType === 'all' || service.serviceTypes.includes(filterType);
     const matchesMonth = filterMonth === 'all' || (date.getMonth() + 1).toString() === filterMonth;
     const matchesYear = filterYear === 'all' || date.getFullYear().toString() === filterYear;
-    const matchesPlate = filterPlate === 'all' || truck?.plateNumber === filterPlate;
+    const matchesPlate = !filterPlate || truck?.plateNumber.toLowerCase().includes(filterPlate.toLowerCase());
     const matchesAllocation = filterAllocation === 'all' || truck?.allocation === filterAllocation;
     return matchesType && matchesMonth && matchesYear && matchesPlate && matchesAllocation;
   });
@@ -96,16 +96,16 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onDel
       <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <div className="flex flex-col">
           <label className="text-xs text-gray-500 mb-1">No Polisi</label>
-          <select
-            className="border border-slate-200 rounded-lg py-2 px-3 outline-none bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
-            value={filterPlate}
-            onChange={e => setFilterPlate(e.target.value)}
-          >
-            <option value="all">Semua No Polisi</option>
-            {plateNumbers.map(p => (
-              <option key={p} value={p}>{p}</option>
-            ))}
-          </select>
+          <div className="relative">
+            <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
+            <input
+              type="text"
+              placeholder="Cari No Polisi..."
+              className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg outline-none bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all text-sm"
+              value={filterPlate}
+              onChange={e => setFilterPlate(e.target.value)}
+            />
+          </div>
         </div>
 
         <div className="flex flex-col">
