@@ -18,6 +18,7 @@ export const api = {
     clients: {
         list: () => request<any[]>('/clients'),
         create: (data: any) => request<any>('/clients', { method: 'POST', body: JSON.stringify(data) }),
+        update: (data: any) => request<any>('/clients', { method: 'PUT', body: JSON.stringify(data) }),
         delete: (id: string) => request<any>('/clients', { method: 'DELETE', body: JSON.stringify({ id }) }),
     },
 

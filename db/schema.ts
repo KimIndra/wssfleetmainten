@@ -11,6 +11,7 @@ export const clients = pgTable('clients', {
     name: text('name').notNull(),
     contactPerson: text('contact_person').notNull(),
     phone: text('phone').notNull(),
+    allocations: jsonb('allocations').$type<string[]>().default([]).notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -24,13 +25,20 @@ export const trucks = pgTable('trucks', {
     model: text('model').notNull(),
     year: integer('year').notNull(),
     size: truckSizeEnum('size').notNull(),
-    tonnage: real('tonnage').notNull(),
+    tonnage: real('tonnage').notNull().default(0),
     clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+    allocation: text('allocation'),
+    description: text('description'),
+    engineNumber: text('engine_number'),
+    chassisNumber: text('chassis_number'),
     currentOdometer: integer('current_odometer').notNull().default(0),
     lastServiceDate: text('last_service_date'),
     lastServiceOdometer: integer('last_service_odometer').default(0),
     serviceIntervalKm: integer('service_interval_km').notNull().default(10000),
     serviceIntervalMonths: integer('service_interval_months').notNull().default(6),
+    stnkExpiry: text('stnk_expiry'),
+    tax5yearExpiry: text('tax5year_expiry'),
+    kirExpiry: text('kir_expiry'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 

@@ -2,10 +2,7 @@ import React, { useState } from 'react';
 import { Truck, Client, ServiceSchedule, TruckSize } from '../types';
 import { Settings, Plus, Trash2, FileText, Search, Truck as TruckIcon, Calendar, Gauge, Building2, Hash, ClipboardList, Clock, Save, X, ChevronDown, MapPin, Wrench, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
 
-const ALLOCATION_OPTIONS: Record<TruckSize, string[]> = {
-  Big: ['Kurere', 'Depo', 'Dam CBT', 'Dongjin'],
-  Small: ['DDS JKT', 'DDS KRW', 'DDS SMRG', 'DAM KRW', 'Dongjin', 'Nissin'],
-};
+
 
 // --- Reusable sub-components (defined OUTSIDE to prevent re-mount on parent re-render) ---
 const InputField = ({ label, icon: Icon, required, ...props }: any) => (
@@ -429,9 +426,13 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
                   </SelectField>
                   <SelectField label="Alokasi" icon={MapPin} value={formData.allocation || ''} onChange={(e: any) => setFormData({ ...formData, allocation: e.target.value || null })}>
                     <option value="">-- Pilih --</option>
-                    {(ALLOCATION_OPTIONS[(formData.size as TruckSize) || 'Big'] || []).map(opt => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
+                    {(() => {
+                      const selectedClient = clients.find(c => c.id === formData.clientId);
+                      const clientAllocations = selectedClient?.allocations || [];
+                      return clientAllocations.map((opt: string) => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ));
+                    })()}
                   </SelectField>
                   <InputField label="Odometer" icon={Gauge} type="number" required placeholder="0" value={formData.currentOdometer || ''} onChange={(e: any) => setFormData({ ...formData, currentOdometer: parseInt(e.target.value) })} />
                 </div>

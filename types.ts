@@ -6,6 +6,7 @@ export interface Client {
   name: string;
   contactPerson: string;
   phone: string;
+  allocations: string[];
 }
 
 export interface ServiceSchedule {

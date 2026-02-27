@@ -92,6 +92,11 @@ const App: React.FC = () => {
     setClients(prev => prev.filter(c => c.id !== clientId));
   };
 
+  const handleEditClient = async (client: Client): Promise<void> => {
+    const updated = await api.clients.update(client);
+    setClients(prev => prev.map(c => c.id === updated.id ? { ...c, ...updated } : c));
+  };
+
   const handleDeleteService = async (serviceId: string): Promise<void> => {
     await api.services.delete(serviceId);
     setServices(prev => prev.filter(s => s.id !== serviceId));
@@ -169,7 +174,9 @@ const App: React.FC = () => {
         return (
           <ClientManagement
             clients={clients}
+            trucks={trucks}
             onAddClient={handleAddClient}
+            onEditClient={handleEditClient}
             onDeleteClient={handleDeleteClient}
           />
         );
