@@ -38,7 +38,17 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onDel
     const date = new Date(service.serviceDate);
     const truck = trucks.find(t => t.id === service.truckId);
     const matchesType = filterType === 'all' || service.serviceTypes.includes(filterType);
-    const matchesMonth = filterMonth === 'all' || (date.getMonth() + 1).toString() === filterMonth;
+
+    const matchesMonth = (() => {
+      if (filterMonth === 'all') return true;
+      const m = date.getMonth() + 1;
+      if (filterMonth === 'q1') return m >= 1 && m <= 3;
+      if (filterMonth === 'q2') return m >= 4 && m <= 6;
+      if (filterMonth === 'q3') return m >= 7 && m <= 9;
+      if (filterMonth === 'q4') return m >= 10 && m <= 12;
+      return m.toString() === filterMonth;
+    })();
+
     const matchesYear = filterYear === 'all' || date.getFullYear().toString() === filterYear;
     const matchesPlate = !filterPlate || truck?.plateNumber.toLowerCase().includes(filterPlate.toLowerCase());
     const matchesAllocation = filterAllocation === 'all' || truck?.allocation === filterAllocation;
@@ -144,18 +154,26 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onDel
             onChange={e => setFilterMonth(e.target.value)}
           >
             <option value="all">Semua Bulan</option>
-            <option value="1">Januari</option>
-            <option value="2">Februari</option>
-            <option value="3">Maret</option>
-            <option value="4">April</option>
-            <option value="5">Mei</option>
-            <option value="6">Juni</option>
-            <option value="7">Juli</option>
-            <option value="8">Agustus</option>
-            <option value="9">September</option>
-            <option value="10">Oktober</option>
-            <option value="11">November</option>
-            <option value="12">Desember</option>
+            <optgroup label="Kuartal / Per 3 Bulan">
+              <option value="q1">Q1 (Januari - Maret)</option>
+              <option value="q2">Q2 (April - Juni)</option>
+              <option value="q3">Q3 (Juli - September)</option>
+              <option value="q4">Q4 (Oktober - Desember)</option>
+            </optgroup>
+            <optgroup label="Bulan Spesifik">
+              <option value="1">Januari</option>
+              <option value="2">Februari</option>
+              <option value="3">Maret</option>
+              <option value="4">April</option>
+              <option value="5">Mei</option>
+              <option value="6">Juni</option>
+              <option value="7">Juli</option>
+              <option value="8">Agustus</option>
+              <option value="9">September</option>
+              <option value="10">Oktober</option>
+              <option value="11">November</option>
+              <option value="12">Desember</option>
+            </optgroup>
           </select>
         </div>
 
