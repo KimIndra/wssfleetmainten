@@ -19,7 +19,8 @@ const SERVICE_CATEGORIES = [
 
 const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onDeleteService }) => {
   const [filterType, setFilterType] = useState('all');
-  const [filterMonth, setFilterMonth] = useState('all');
+  const [filterMonthFrom, setFilterMonthFrom] = useState('all');
+  const [filterMonthTo, setFilterMonthTo] = useState('all');
   const [filterYear, setFilterYear] = useState('all');
   const [filterPlate, setFilterPlate] = useState('');
   const [filterAllocation, setFilterAllocation] = useState('all');
@@ -40,15 +41,13 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onDel
     const matchesType = filterType === 'all' || service.serviceTypes.includes(filterType);
 
     const matchesMonth = (() => {
-      if (filterMonth === 'all') return true;
+      if (filterMonthFrom === 'all' && filterMonthTo === 'all') return true;
       const m = date.getMonth() + 1;
-      // 3-month period: p1 = Jan-Mar, p2 = Feb-Apr, ... p12 = Dec-Feb
-      if (filterMonth.startsWith('p')) {
-        const start = parseInt(filterMonth.substring(1));
-        const months = [start, (start % 12) + 1, ((start + 1) % 12) + 1];
-        return months.includes(m);
-      }
-      return m.toString() === filterMonth;
+      const from = filterMonthFrom === 'all' ? 1 : parseInt(filterMonthFrom);
+      const to = filterMonthTo === 'all' ? 12 : parseInt(filterMonthTo);
+      if (from <= to) return m >= from && m <= to;
+      // wrap around (e.g. Nov-Feb)
+      return m >= from || m <= to;
     })();
 
     const matchesYear = filterYear === 'all' || date.getFullYear().toString() === filterYear;
@@ -105,7 +104,7 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onDel
         </button>
       </div>
 
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <div className="flex flex-col">
           <label className="text-xs text-gray-500 mb-1">No Polisi</label>
           <div className="relative">
@@ -149,41 +148,48 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onDel
         </div>
 
         <div className="flex flex-col">
-          <label className="text-xs text-gray-500 mb-1">Bulan</label>
+          <label className="text-xs text-gray-500 mb-1">Dari Bulan</label>
           <select
             className="border border-slate-200 rounded-lg py-2 px-3 outline-none bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
-            value={filterMonth}
-            onChange={e => setFilterMonth(e.target.value)}
+            value={filterMonthFrom}
+            onChange={e => setFilterMonthFrom(e.target.value)}
           >
-            <option value="all">Semua Bulan</option>
-            <optgroup label="Periode 3 Bulan">
-              <option value="p1">Januari - Maret</option>
-              <option value="p2">Februari - April</option>
-              <option value="p3">Maret - Mei</option>
-              <option value="p4">April - Juni</option>
-              <option value="p5">Mei - Juli</option>
-              <option value="p6">Juni - Agustus</option>
-              <option value="p7">Juli - September</option>
-              <option value="p8">Agustus - Oktober</option>
-              <option value="p9">September - November</option>
-              <option value="p10">Oktober - Desember</option>
-              <option value="p11">November - Januari</option>
-              <option value="p12">Desember - Februari</option>
-            </optgroup>
-            <optgroup label="Bulan Spesifik">
-              <option value="1">Januari</option>
-              <option value="2">Februari</option>
-              <option value="3">Maret</option>
-              <option value="4">April</option>
-              <option value="5">Mei</option>
-              <option value="6">Juni</option>
-              <option value="7">Juli</option>
-              <option value="8">Agustus</option>
-              <option value="9">September</option>
-              <option value="10">Oktober</option>
-              <option value="11">November</option>
-              <option value="12">Desember</option>
-            </optgroup>
+            <option value="all">Semua</option>
+            <option value="1">Januari</option>
+            <option value="2">Februari</option>
+            <option value="3">Maret</option>
+            <option value="4">April</option>
+            <option value="5">Mei</option>
+            <option value="6">Juni</option>
+            <option value="7">Juli</option>
+            <option value="8">Agustus</option>
+            <option value="9">September</option>
+            <option value="10">Oktober</option>
+            <option value="11">November</option>
+            <option value="12">Desember</option>
+          </select>
+        </div>
+
+        <div className="flex flex-col">
+          <label className="text-xs text-gray-500 mb-1">Sampai Bulan</label>
+          <select
+            className="border border-slate-200 rounded-lg py-2 px-3 outline-none bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
+            value={filterMonthTo}
+            onChange={e => setFilterMonthTo(e.target.value)}
+          >
+            <option value="all">Semua</option>
+            <option value="1">Januari</option>
+            <option value="2">Februari</option>
+            <option value="3">Maret</option>
+            <option value="4">April</option>
+            <option value="5">Mei</option>
+            <option value="6">Juni</option>
+            <option value="7">Juli</option>
+            <option value="8">Agustus</option>
+            <option value="9">September</option>
+            <option value="10">Oktober</option>
+            <option value="11">November</option>
+            <option value="12">Desember</option>
           </select>
         </div>
 
