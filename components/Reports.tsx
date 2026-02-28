@@ -10,7 +10,7 @@ import {
 import {
   Download, Printer, TrendingUp, TrendingDown, DollarSign, Wrench, AlertCircle, Calendar,
   FileBarChart, PieChart as PieChartIcon, ArrowUpRight, ArrowDownRight, BarChart3,
-  FileSpreadsheet, FileText, Table2, Filter
+  FileSpreadsheet, FileText, Table2, Filter, Database
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 
@@ -128,6 +128,21 @@ const Reports: React.FC<ReportsProps> = ({ services, trucks }) => {
     }).filter(Boolean);
     return data.sort((a: any, b: any) => b.cost - a.cost).slice(0, 5);
   }, [spendingByTruck, trucks]);
+
+  const topPartsData = useMemo(() => {
+    const partsCost: Record<string, number> = {};
+    filteredServices.forEach(s => {
+      s.parts.forEach(p => {
+        const name = p.name.trim().toUpperCase();
+        partsCost[name] = (partsCost[name] || 0) + (p.price * p.quantity);
+      });
+    });
+    const data = Object.keys(partsCost).map(name => ({
+      name,
+      cost: partsCost[name]
+    }));
+    return data.sort((a, b) => b.cost - a.cost).slice(0, 7); // Top 7 items
+  }, [filteredServices]);
 
   // --- Handlers ---
   const handleExportExcel = () => {
@@ -608,6 +623,61 @@ const Reports: React.FC<ReportsProps> = ({ services, trucks }) => {
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Top Parts / Material Cost */}
+            <div className="lg:col-span-3 bg-white p-6 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+              <div className="mb-6">
+                <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                  <Database size={16} className="text-emerald-500" /> Top Biaya Spare Part / Material
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">Akumulasi pengeluaran berdasarkan nama spare part atau item service</p>
+              </div>
+              {topPartsData.length > 0 ? (
+                <div className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={topPartsData} margin={{ top: 10, right: 10, left: 0, bottom: 25 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis
+                        dataKey="name"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: '#475569', fontSize: 11, fontWeight: 600 }}
+                        angle={-15}
+                        textAnchor="end"
+                        dy={10}
+                        height={40}
+                      />
+                      <YAxis
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: '#94a3b8', fontSize: 11 }}
+                        tickFormatter={(value) => value >= 1000000 ? `${(value / 1000000).toFixed(1)}M` : value >= 1000 ? `${(value / 1000).toFixed(0)}K` : value.toString()}
+                        width={60}
+                      />
+                      <Tooltip
+                        cursor={{ fill: '#f8fafc' }}
+                        formatter={(value: number) => [formatCurrency(value), 'Total Biaya']}
+                        contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 10px 25px -5px rgba(0,0,0,.1)' }}
+                      />
+                      <defs>
+                        <linearGradient id="barGradParts" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#10b981" />
+                          <stop offset="100%" stopColor="#059669" />
+                        </linearGradient>
+                      </defs>
+                      <Bar dataKey="cost" fill="url(#barGradParts)" radius={[6, 6, 0, 0]} maxBarSize={40} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="h-72 flex items-center justify-center text-slate-400">
+                  <div className="text-center">
+                    <Database size={40} className="mx-auto mb-2 opacity-30" />
+                    <p className="text-sm">Belum ada data spare part</p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Cost Breakdown Summary */}
