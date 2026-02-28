@@ -103,15 +103,30 @@ const Reports: React.FC<ReportsProps> = ({ services, trucks }) => {
       .sort((a, b) => b.value - a.value);
   }, [filteredServices]);
 
-  const topTrucksData = useMemo(() => {
+  const totalPieValue = pieData.reduce((sum, item) => sum + item.value, 0);
+
+  const topBigTrucksData = useMemo(() => {
     const data = Object.keys(spendingByTruck).map(truckId => {
       const truck = trucks.find(t => t.id === truckId);
+      if (!truck || truck.size !== 'Big') return null;
       return {
-        name: truck ? truck.plateNumber : 'Unknown',
+        name: truck.plateNumber,
         cost: spendingByTruck[truckId]
       };
-    });
-    return data.sort((a, b) => b.cost - a.cost).slice(0, 5);
+    }).filter(Boolean);
+    return data.sort((a: any, b: any) => b.cost - a.cost).slice(0, 5);
+  }, [spendingByTruck, trucks]);
+
+  const topSmallTrucksData = useMemo(() => {
+    const data = Object.keys(spendingByTruck).map(truckId => {
+      const truck = trucks.find(t => t.id === truckId);
+      if (!truck || truck.size !== 'Small') return null;
+      return {
+        name: truck.plateNumber,
+        cost: spendingByTruck[truckId]
+      };
+    }).filter(Boolean);
+    return data.sort((a: any, b: any) => b.cost - a.cost).slice(0, 5);
   }, [spendingByTruck, trucks]);
 
   // --- Handlers ---
@@ -199,10 +214,13 @@ const Reports: React.FC<ReportsProps> = ({ services, trucks }) => {
 
   const PieTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
+      const percent = totalPieValue > 0 ? ((payload[0].value / totalPieValue) * 100).toFixed(1) : 0;
       return (
         <div className="bg-white p-3 border border-slate-200 shadow-xl rounded-xl">
           <p className="text-xs font-semibold text-slate-700">{payload[0].name}</p>
-          <p className="text-sm font-bold" style={{ color: payload[0].payload.fill }}>{payload[0].value} kali</p>
+          <p className="text-sm font-bold" style={{ color: payload[0].payload.fill }}>
+            {payload[0].value} kali <span className="text-slate-400 font-normal">({percent}%)</span>
+          </p>
         </div>
       );
     }
@@ -450,6 +468,18 @@ const Reports: React.FC<ReportsProps> = ({ services, trucks }) => {
                         paddingAngle={4}
                         dataKey="value"
                         strokeWidth={0}
+                        label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }) => {
+                          const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                          const x = cx + radius * Math.cos(-midAngle * Math.PI / 180);
+                          const y = cy + radius * Math.sin(-midAngle * Math.PI / 180);
+                          if (percent < 0.05) return null;
+                          return (
+                            <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" fontSize={11} fontWeight={600}>
+                              {`${(percent * 100).toFixed(0)}%`}
+                            </text>
+                          );
+                        }}
+                        labelLine={false}
                       >
                         {pieData.map((_, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -460,12 +490,15 @@ const Reports: React.FC<ReportsProps> = ({ services, trucks }) => {
                   </ResponsiveContainer>
                   {/* Legend below */}
                   <div className="flex flex-wrap gap-x-4 gap-y-1.5 justify-center mt-2">
-                    {pieData.map((entry, index) => (
-                      <div key={entry.name} className="flex items-center gap-1.5">
-                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                        <span className="text-xs text-slate-600">{entry.name} <span className="text-slate-400">({entry.value})</span></span>
-                      </div>
-                    ))}
+                    {pieData.map((entry, index) => {
+                      const percent = totalPieValue > 0 ? ((entry.value / totalPieValue) * 100).toFixed(1) : '0';
+                      return (
+                        <div key={entry.name} className="flex items-center gap-1.5">
+                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                          <span className="text-xs text-slate-600">{entry.name} <span className="text-slate-400">({entry.value}x - {percent}%)</span></span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               ) : (
@@ -480,50 +513,101 @@ const Reports: React.FC<ReportsProps> = ({ services, trucks }) => {
           {/* Top 5 Bar Chart + Cost Breakdown */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Top 5 */}
-            <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
-              <div className="mb-6">
-                <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
-                  <BarChart3 size={16} className="text-amber-500" /> Top 5 Biaya Tertinggi
-                </h2>
-                <p className="text-xs text-slate-400 mt-0.5">Unit armada dengan maintenance cost terbesar</p>
-              </div>
-              {topTrucksData.length > 0 ? (
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={topTrucksData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                      <XAxis type="number" hide />
-                      <YAxis
-                        dataKey="name"
-                        type="category"
-                        axisLine={false}
-                        tickLine={false}
-                        width={100}
-                        tick={{ fill: '#475569', fontSize: 12, fontWeight: 600 }}
-                      />
-                      <Tooltip
-                        cursor={{ fill: '#f8fafc' }}
-                        formatter={(value: number) => [formatCurrency(value), 'Total Biaya']}
-                        contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 10px 25px -5px rgba(0,0,0,.1)' }}
-                      />
-                      <defs>
-                        <linearGradient id="barGrad" x1="0" y1="0" x2="1" y2="0">
-                          <stop offset="0%" stopColor="#f59e0b" />
-                          <stop offset="100%" stopColor="#ef4444" />
-                        </linearGradient>
-                      </defs>
-                      <Bar dataKey="cost" fill="url(#barGrad)" radius={[0, 6, 6, 0]} barSize={20} />
-                    </BarChart>
-                  </ResponsiveContainer>
+            {/* Top 5 Big & Small */}
+            <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Top 5 Big Truck */}
+              <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+                <div className="mb-6">
+                  <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                    <BarChart3 size={16} className="text-amber-500" /> Top 5 Biaya (Big Truck)
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-0.5">Big truck dengan maintenance cost terbesar</p>
                 </div>
-              ) : (
-                <div className="h-64 flex items-center justify-center text-slate-400">
-                  <div className="text-center">
-                    <BarChart3 size={40} className="mx-auto mb-2 opacity-30" />
-                    <p className="text-sm">Belum ada data</p>
+                {topBigTrucksData.length > 0 ? (
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={topBigTrucksData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                        <XAxis type="number" hide />
+                        <YAxis
+                          dataKey="name"
+                          type="category"
+                          axisLine={false}
+                          tickLine={false}
+                          width={75}
+                          tick={{ fill: '#475569', fontSize: 11, fontWeight: 600 }}
+                        />
+                        <Tooltip
+                          cursor={{ fill: '#f8fafc' }}
+                          formatter={(value: number) => [formatCurrency(value), 'Total Biaya']}
+                          contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 10px 25px -5px rgba(0,0,0,.1)' }}
+                        />
+                        <defs>
+                          <linearGradient id="barGrad" x1="0" y1="0" x2="1" y2="0">
+                            <stop offset="0%" stopColor="#f59e0b" />
+                            <stop offset="100%" stopColor="#ef4444" />
+                          </linearGradient>
+                        </defs>
+                        <Bar dataKey="cost" fill="url(#barGrad)" radius={[0, 6, 6, 0]} barSize={20} />
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
+                ) : (
+                  <div className="h-64 flex items-center justify-center text-slate-400">
+                    <div className="text-center">
+                      <BarChart3 size={40} className="mx-auto mb-2 opacity-30" />
+                      <p className="text-sm">Belum ada data Big Truck</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Top 5 Small Truck */}
+              <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+                <div className="mb-6">
+                  <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                    <BarChart3 size={16} className="text-blue-500" /> Top 5 Biaya (Small Truck)
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-0.5">Small truck dengan maintenance cost terbesar</p>
                 </div>
-              )}
+                {topSmallTrucksData.length > 0 ? (
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={topSmallTrucksData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                        <XAxis type="number" hide />
+                        <YAxis
+                          dataKey="name"
+                          type="category"
+                          axisLine={false}
+                          tickLine={false}
+                          width={75}
+                          tick={{ fill: '#475569', fontSize: 11, fontWeight: 600 }}
+                        />
+                        <Tooltip
+                          cursor={{ fill: '#f8fafc' }}
+                          formatter={(value: number) => [formatCurrency(value), 'Total Biaya']}
+                          contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 10px 25px -5px rgba(0,0,0,.1)' }}
+                        />
+                        <defs>
+                          <linearGradient id="barGradSmall" x1="0" y1="0" x2="1" y2="0">
+                            <stop offset="0%" stopColor="#3b82f6" />
+                            <stop offset="100%" stopColor="#6366f1" />
+                          </linearGradient>
+                        </defs>
+                        <Bar dataKey="cost" fill="url(#barGradSmall)" radius={[0, 6, 6, 0]} barSize={20} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="h-64 flex items-center justify-center text-slate-400">
+                    <div className="text-center">
+                      <BarChart3 size={40} className="mx-auto mb-2 opacity-30" />
+                      <p className="text-sm">Belum ada data Small Truck</p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Cost Breakdown Summary */}
