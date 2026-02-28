@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Client, Truck } from '../types';
-import { Plus, Pencil, Trash2, Users, Phone, User, MapPin, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, Users, Phone, User } from 'lucide-react';
 
 interface ClientManagementProps {
     clients: Client[];
@@ -16,13 +16,9 @@ const ClientManagement: React.FC<ClientManagementProps> = ({ clients, trucks, on
     const [editingId, setEditingId] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formData, setFormData] = useState({ name: '', contactPerson: '', phone: '' });
-    const [allocations, setAllocations] = useState<string[]>([]);
-    const [newAllocation, setNewAllocation] = useState('');
 
     const handleOpenAdd = () => {
         setFormData({ name: '', contactPerson: '', phone: '' });
-        setAllocations([]);
-        setNewAllocation('');
         setIsEditing(false);
         setEditingId(null);
         setIsModalOpen(true);
@@ -30,22 +26,9 @@ const ClientManagement: React.FC<ClientManagementProps> = ({ clients, trucks, on
 
     const handleOpenEdit = (client: Client) => {
         setFormData({ name: client.name, contactPerson: client.contactPerson, phone: client.phone });
-        setAllocations(client.allocations || []);
-        setNewAllocation('');
         setIsEditing(true);
         setEditingId(client.id);
         setIsModalOpen(true);
-    };
-
-    const handleAddAllocation = () => {
-        const trimmed = newAllocation.trim();
-        if (!trimmed || allocations.includes(trimmed)) return;
-        setAllocations([...allocations, trimmed]);
-        setNewAllocation('');
-    };
-
-    const handleRemoveAllocation = (idx: number) => {
-        setAllocations(allocations.filter((_, i) => i !== idx));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -60,7 +43,7 @@ const ClientManagement: React.FC<ClientManagementProps> = ({ clients, trucks, on
                     name: formData.name,
                     contactPerson: formData.contactPerson,
                     phone: formData.phone,
-                    allocations,
+                    allocations: [], // keep empty array to satisfy type
                 });
             } else {
                 const newClient: Client = {
@@ -68,13 +51,12 @@ const ClientManagement: React.FC<ClientManagementProps> = ({ clients, trucks, on
                     name: formData.name,
                     contactPerson: formData.contactPerson,
                     phone: formData.phone,
-                    allocations,
+                    allocations: [],
                 };
                 await onAddClient(newClient);
             }
             setIsModalOpen(false);
             setFormData({ name: '', contactPerson: '', phone: '' });
-            setAllocations([]);
         } catch (err: any) {
             alert((isEditing ? 'Gagal mengubah' : 'Gagal menambah') + ' client: ' + (err.message ?? 'Terjadi kesalahan'));
         } finally {
@@ -100,7 +82,7 @@ const ClientManagement: React.FC<ClientManagementProps> = ({ clients, trucks, on
             <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-800">Kelola Client</h1>
-                    <p className="text-sm text-gray-500 mt-1">Data client & alokasi penempatan armada.</p>
+                    <p className="text-sm text-gray-500 mt-1">Data client pelanggan Anda.</p>
                 </div>
                 <button
                     onClick={handleOpenAdd}
@@ -169,23 +151,6 @@ const ClientManagement: React.FC<ClientManagementProps> = ({ clients, trucks, on
                                     <span>{client.phone}</span>
                                 </div>
                             </div>
-
-                            {/* Allocations */}
-                            {client.allocations && client.allocations.length > 0 && (
-                                <div className="mt-3 pt-3 border-t border-gray-100">
-                                    <div className="flex items-center gap-1.5 mb-2">
-                                        <MapPin size={13} className="text-indigo-500" />
-                                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Alokasi</span>
-                                    </div>
-                                    <div className="flex flex-wrap gap-1.5">
-                                        {client.allocations.map((alloc, idx) => (
-                                            <span key={idx} className="px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-medium border border-indigo-100">
-                                                {alloc}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
                         </div>
                     );
                 })}
@@ -249,48 +214,6 @@ const ClientManagement: React.FC<ClientManagementProps> = ({ clients, trucks, on
                                     value={formData.phone}
                                     onChange={e => setFormData({ ...formData, phone: e.target.value })}
                                 />
-                            </div>
-
-                            {/* Allocations Section */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    <span className="flex items-center gap-1"><MapPin size={14} /> Alokasi Penempatan</span>
-                                </label>
-                                <div className="flex gap-2 mb-2">
-                                    <input
-                                        type="text"
-                                        placeholder="Ketik nama alokasi, lalu klik Tambah"
-                                        className="flex-1 border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                                        value={newAllocation}
-                                        onChange={e => setNewAllocation(e.target.value)}
-                                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddAllocation(); } }}
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={handleAddAllocation}
-                                        className="px-3 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors text-sm font-medium cursor-pointer"
-                                    >
-                                        <Plus size={16} />
-                                    </button>
-                                </div>
-                                {allocations.length > 0 ? (
-                                    <div className="flex flex-wrap gap-2">
-                                        {allocations.map((alloc, idx) => (
-                                            <span key={idx} className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-medium border border-indigo-100">
-                                                {alloc}
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleRemoveAllocation(idx)}
-                                                    className="text-indigo-400 hover:text-red-500 cursor-pointer"
-                                                >
-                                                    <X size={12} />
-                                                </button>
-                                            </span>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <p className="text-xs text-gray-400 italic">Belum ada alokasi. Ketik nama lalu tekan Enter atau klik +</p>
-                                )}
                             </div>
 
                             <div className="pt-2 flex justify-end gap-3">

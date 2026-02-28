@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { Truck, Client, ServiceSchedule, TruckSize } from '../types';
 import { Settings, Plus, Trash2, FileText, Search, Truck as TruckIcon, Calendar, Gauge, Building2, Hash, ClipboardList, Clock, Save, X, ChevronDown, MapPin, Wrench, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
 
-
-
-// --- Reusable sub-components (defined OUTSIDE to prevent re-mount on parent re-render) ---
+const ALLOCATION_OPTIONS: Record<TruckSize, string[]> = {
+  Big: ['Kurere', 'Depo', 'Dam CBT', 'Dongjin'],
+  Small: ['DDS JKT', 'DDS KRW', 'DDS SMRG', 'DAM KRW', 'Dongjin', 'Nissin'],
+};// --- Reusable sub-components (defined OUTSIDE to prevent re-mount on parent re-render) ---
 const InputField = ({ label, icon: Icon, required, ...props }: any) => (
   <div>
     <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
@@ -429,17 +430,16 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
                       label="Alokasi"
                       icon={MapPin}
                       placeholder="Ketik atau pilih..."
-                      list="client-allocations"
+                      list="truck-allocations"
                       value={formData.allocation || ''}
                       onChange={(e: any) => setFormData({ ...formData, allocation: e.target.value || null })}
                     />
                     {(() => {
-                      const selectedClient = clients.find(c => c.id === formData.clientId);
-                      const clientAllocations = selectedClient?.allocations || [];
-                      if (clientAllocations.length === 0) return null;
+                      const options = ALLOCATION_OPTIONS[(formData.size as TruckSize) || 'Big'] || [];
+                      if (options.length === 0) return null;
                       return (
-                        <datalist id="client-allocations">
-                          {clientAllocations.map((opt: string) => (
+                        <datalist id="truck-allocations">
+                          {options.map((opt: string) => (
                             <option key={opt} value={opt} />
                           ))}
                         </datalist>
