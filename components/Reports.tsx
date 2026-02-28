@@ -22,7 +22,8 @@ interface ReportsProps {
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
 
 const Reports: React.FC<ReportsProps> = ({ services, trucks }) => {
-  const [monthFilter, setMonthFilter] = useState<string>('all');
+  const [fromMonth, setFromMonth] = useState<string>('all');
+  const [toMonth, setToMonth] = useState<string>('all');
   const [yearFilter, setYearFilter] = useState<string>(new Date().getFullYear().toString());
   const [activeTab, setActiveTab] = useState<'charts' | 'table'>('charts');
 
@@ -38,10 +39,20 @@ const Reports: React.FC<ReportsProps> = ({ services, trucks }) => {
     return services.filter(s => {
       const sDate = parseISO(s.serviceDate);
       const matchYear = sDate.getFullYear().toString() === yearFilter;
-      const matchMonth = monthFilter === 'all' || (sDate.getMonth() + 1).toString() === monthFilter;
+
+      let matchMonth = true;
+      const monthNum = sDate.getMonth() + 1;
+
+      const from = fromMonth === 'all' ? 1 : parseInt(fromMonth);
+      const to = toMonth === 'all' ? 12 : parseInt(toMonth);
+
+      if (fromMonth !== 'all' || toMonth !== 'all') {
+        matchMonth = monthNum >= from && monthNum <= to;
+      }
+
       return matchYear && matchMonth;
     });
-  }, [services, monthFilter, yearFilter]);
+  }, [services, fromMonth, toMonth, yearFilter]);
 
   // --- KPI Calculations ---
   const totalCost = filteredServices.reduce((sum, s) => sum + s.totalCost, 0);
@@ -116,7 +127,7 @@ const Reports: React.FC<ReportsProps> = ({ services, trucks }) => {
       'Biaya Jasa': s.laborCost,
       'Total Biaya': s.totalCost
     }));
-    exportToExcel(dataToExport, `Laporan_Service_${yearFilter}_${monthFilter}`, 'Laporan Service');
+    exportToExcel(dataToExport, `Laporan_Service_${yearFilter}_${fromMonth}-${toMonth}`, 'Laporan Service');
   };
 
   const handleExportPDF = () => {
@@ -134,7 +145,9 @@ const Reports: React.FC<ReportsProps> = ({ services, trucks }) => {
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(100);
-    const filterLabel = monthFilter === 'all' ? `Semua Bulan ${yearFilter}` : `Bulan ${monthFilter} / ${yearFilter}`;
+    const filterLabel = (fromMonth === 'all' && toMonth === 'all')
+      ? `Semua Bulan ${yearFilter}`
+      : `${fromMonth === 'all' ? 'Jan' : fromMonth} - ${toMonth === 'all' ? 'Des' : toMonth} / ${yearFilter}`;
     doc.text(`Periode: ${filterLabel}  |  Total: ${filteredServices.length} service  |  Dicetak: ${new Date().toLocaleDateString('id-ID')}`, 14, 25);
 
     // Table
@@ -166,7 +179,7 @@ const Reports: React.FC<ReportsProps> = ({ services, trucks }) => {
       },
     });
 
-    doc.save(`Laporan_Service_${yearFilter}_${monthFilter}.pdf`);
+    doc.save(`Laporan_Service_${yearFilter}_${fromMonth}-${toMonth}.pdf`);
   };
 
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -212,28 +225,59 @@ const Reports: React.FC<ReportsProps> = ({ services, trucks }) => {
         </div>
         <div className="flex flex-wrap gap-2">
           {/* Filter Chips */}
-          <div className="flex items-center bg-white rounded-xl shadow-sm border border-slate-200 p-1 gap-1">
-            <Filter size={14} className="text-slate-400 ml-2" />
-            <select
-              className="bg-transparent text-sm font-medium text-slate-700 py-1.5 px-2 outline-none cursor-pointer"
-              value={monthFilter}
-              onChange={e => setMonthFilter(e.target.value)}
-            >
-              <option value="all">Semua Bulan</option>
-              {Array.from({ length: 12 }, (_, i) => (
-                <option key={i} value={i + 1}>{format(new Date(2024, i, 1), 'MMMM')}</option>
-              ))}
-            </select>
-            <div className="w-px h-5 bg-slate-200"></div>
-            <select
-              className="bg-transparent text-sm font-medium text-slate-700 py-1.5 px-2 outline-none cursor-pointer"
-              value={yearFilter}
-              onChange={e => setYearFilter(e.target.value)}
-            >
-              {availableYears.map(y => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
+          <div className="flex items-end gap-3">
+            <div className="flex flex-col">
+              <label className="text-xs text-slate-500 mb-1 ml-1">Dari Bulan</label>
+              <div className="flex items-center bg-white rounded-xl shadow-sm border border-slate-200 p-1.5 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all">
+                <select
+                  className="bg-transparent text-sm font-medium text-slate-800 px-2 outline-none cursor-pointer min-w-[120px] appearance-none"
+                  value={fromMonth}
+                  onChange={e => setFromMonth(e.target.value)}
+                >
+                  <option value="all">Semua</option>
+                  {Array.from({ length: 12 }, (_, i) => (
+                    <option key={i} value={i + 1}>{format(new Date(2024, i, 1), 'MMMM')}</option>
+                  ))}
+                </select>
+                <div className="pointer-events-none pr-2">
+                  <svg className="h-4 w-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col">
+              <label className="text-xs text-slate-500 mb-1 ml-1">Sampai Bulan</label>
+              <div className="flex items-center bg-white rounded-xl shadow-sm border border-slate-200 p-1.5 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all">
+                <select
+                  className="bg-transparent text-sm font-medium text-slate-800 px-2 outline-none cursor-pointer min-w-[120px] appearance-none"
+                  value={toMonth}
+                  onChange={e => setToMonth(e.target.value)}
+                >
+                  <option value="all">Semua</option>
+                  {Array.from({ length: 12 }, (_, i) => (
+                    <option key={i} value={i + 1}>{format(new Date(2024, i, 1), 'MMMM')}</option>
+                  ))}
+                </select>
+                <div className="pointer-events-none pr-2">
+                  <svg className="h-4 w-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col">
+              <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1 ml-1">Tahun</label>
+              <div className="flex items-center bg-white rounded-xl shadow-sm border border-slate-200 p-1.5">
+                <select
+                  className="bg-transparent text-sm font-medium text-slate-700 px-2 outline-none cursor-pointer"
+                  value={yearFilter}
+                  onChange={e => setYearFilter(e.target.value)}
+                >
+                  {availableYears.map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
           </div>
 
           <button onClick={handleExportExcel} className="flex items-center gap-2 bg-white hover:bg-emerald-50 border border-slate-200 text-slate-700 px-4 py-2 rounded-xl shadow-sm transition-all text-sm font-medium cursor-pointer hover:border-green-300 group" title="Download file Excel (.xlsx)">
@@ -530,7 +574,7 @@ const Reports: React.FC<ReportsProps> = ({ services, trucks }) => {
               <h2 className="text-base font-bold text-slate-800">Rincian Data Service</h2>
               <p className="text-xs text-slate-400 mt-0.5">
                 {filteredServices.length} data ditemukan
-                {monthFilter !== 'all' && ` • Bulan ${format(new Date(2024, parseInt(monthFilter) - 1, 1), 'MMMM')}`}
+                {(fromMonth !== 'all' || toMonth !== 'all') && ` • Bulan ${fromMonth === 'all' ? 1 : fromMonth} s/d ${toMonth === 'all' ? 12 : toMonth}`}
                 {` • Tahun ${yearFilter}`}
               </p>
             </div>
