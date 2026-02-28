@@ -435,7 +435,13 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
                       onChange={(e: any) => setFormData({ ...formData, allocation: e.target.value || null })}
                     />
                     {(() => {
-                      const options = ALLOCATION_OPTIONS[(formData.size as TruckSize) || 'Big'] || [];
+                      const baseOptions = ALLOCATION_OPTIONS[(formData.size as TruckSize) || 'Big'] || [];
+                      const existingAllocs = trucks
+                        .filter(t => t.size === (formData.size || 'Big') && t.allocation)
+                        .map(t => t.allocation as string);
+
+                      const options = Array.from(new Set([...baseOptions, ...existingAllocs])).sort();
+
                       if (options.length === 0) return null;
                       return (
                         <datalist id="truck-allocations">
