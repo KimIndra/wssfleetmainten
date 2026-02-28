@@ -424,16 +424,28 @@ const TruckList: React.FC<TruckListProps> = ({ trucks, clients, onAddTruck, onEd
                     <option value="Small">Small</option>
                     <option value="Big">Big</option>
                   </SelectField>
-                  <SelectField label="Alokasi" icon={MapPin} value={formData.allocation || ''} onChange={(e: any) => setFormData({ ...formData, allocation: e.target.value || null })}>
-                    <option value="">-- Pilih --</option>
+                  <div className="relative">
+                    <InputField
+                      label="Alokasi"
+                      icon={MapPin}
+                      placeholder="Ketik atau pilih..."
+                      list="client-allocations"
+                      value={formData.allocation || ''}
+                      onChange={(e: any) => setFormData({ ...formData, allocation: e.target.value || null })}
+                    />
                     {(() => {
                       const selectedClient = clients.find(c => c.id === formData.clientId);
                       const clientAllocations = selectedClient?.allocations || [];
-                      return clientAllocations.map((opt: string) => (
-                        <option key={opt} value={opt}>{opt}</option>
-                      ));
+                      if (clientAllocations.length === 0) return null;
+                      return (
+                        <datalist id="client-allocations">
+                          {clientAllocations.map((opt: string) => (
+                            <option key={opt} value={opt} />
+                          ))}
+                        </datalist>
+                      );
                     })()}
-                  </SelectField>
+                  </div>
                   <InputField label="Odometer" icon={Gauge} type="number" required placeholder="0" value={formData.currentOdometer || ''} onChange={(e: any) => setFormData({ ...formData, currentOdometer: parseInt(e.target.value) })} />
                 </div>
 
