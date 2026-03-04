@@ -141,7 +141,7 @@ const Reports: React.FC<ReportsProps> = ({ services, trucks }) => {
       name,
       cost: partsCost[name]
     }));
-    return data.sort((a, b) => b.cost - a.cost).slice(0, 7); // Top 7 items
+    return data.sort((a, b) => b.cost - a.cost);
   }, [filteredServices]);
 
   // --- Handlers ---
@@ -625,57 +625,59 @@ const Reports: React.FC<ReportsProps> = ({ services, trucks }) => {
               </div>
             </div>
 
-            {/* Top Parts / Material Cost */}
-            <div className="lg:col-span-3 bg-white p-6 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
-              <div className="mb-6">
+            {/* Parts / Material Cost Table */}
+            <div className="lg:col-span-3 bg-white rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow overflow-hidden">
+              <div className="p-6 border-b border-slate-100">
                 <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
-                  <Database size={16} className="text-emerald-500" /> Top Biaya Spare Part / Material
+                  <Database size={16} className="text-emerald-500" /> Rekap Biaya Spare Part / Material
                 </h2>
-                <p className="text-xs text-slate-400 mt-0.5">Akumulasi pengeluaran berdasarkan nama spare part atau item service</p>
+                <p className="text-xs text-slate-400 mt-0.5">Akumulasi pengeluaran berdasarkan nama spare part atau item service ({topPartsData.length} item)</p>
               </div>
               {topPartsData.length > 0 ? (
-                <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={topPartsData} margin={{ top: 10, right: 10, left: 0, bottom: 25 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis
-                        dataKey="name"
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fill: '#475569', fontSize: 11, fontWeight: 600 }}
-                        angle={-15}
-                        textAnchor="end"
-                        dy={10}
-                        height={40}
-                      />
-                      <YAxis
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fill: '#94a3b8', fontSize: 11 }}
-                        tickFormatter={(value) => value >= 1000000 ? `${(value / 1000000).toFixed(1)}M` : value >= 1000 ? `${(value / 1000).toFixed(0)}K` : value.toString()}
-                        width={60}
-                      />
-                      <Tooltip
-                        cursor={{ fill: '#f8fafc' }}
-                        formatter={(value: number) => [formatCurrency(value), 'Total Biaya']}
-                        contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 10px 25px -5px rgba(0,0,0,.1)' }}
-                      />
-                      <defs>
-                        <linearGradient id="barGradParts" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#10b981" />
-                          <stop offset="100%" stopColor="#059669" />
-                        </linearGradient>
-                      </defs>
-                      <Bar dataKey="cost" fill="url(#barGradParts)" radius={[6, 6, 0, 0]} maxBarSize={40} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
+                      <tr>
+                        <th className="px-5 py-3 font-semibold text-xs uppercase tracking-wider w-12 text-center">No</th>
+                        <th className="px-5 py-3 font-semibold text-xs uppercase tracking-wider">Nama Part / Material</th>
+                        <th className="px-5 py-3 font-semibold text-xs uppercase tracking-wider text-right">Total Biaya</th>
+                        <th className="px-5 py-3 font-semibold text-xs uppercase tracking-wider text-right w-28">%</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {topPartsData.map((item, idx) => {
+                        const grandTotalParts = topPartsData.reduce((s, i) => s + i.cost, 0);
+                        const pct = grandTotalParts > 0 ? ((item.cost / grandTotalParts) * 100).toFixed(1) : '0';
+                        return (
+                          <tr key={item.name} className="hover:bg-slate-50 transition-colors">
+                            <td className="px-5 py-3 text-center text-slate-400 font-medium">{idx + 1}</td>
+                            <td className="px-5 py-3 font-semibold text-slate-800">{item.name}</td>
+                            <td className="px-5 py-3 text-right font-mono text-slate-700">{formatCurrency(item.cost)}</td>
+                            <td className="px-5 py-3 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <div className="w-16 bg-slate-100 rounded-full h-1.5">
+                                  <div className="h-1.5 rounded-full bg-emerald-500" style={{ width: `${pct}%` }}></div>
+                                </div>
+                                <span className="text-xs text-slate-500 w-12 text-right">{pct}%</span>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot className="bg-slate-50 border-t-2 border-slate-200">
+                      <tr>
+                        <td colSpan={2} className="px-5 py-3 font-bold text-slate-700 uppercase text-xs tracking-wider">Total Keseluruhan</td>
+                        <td className="px-5 py-3 text-right font-bold text-emerald-700 font-mono">{formatCurrency(topPartsData.reduce((s, i) => s + i.cost, 0))}</td>
+                        <td className="px-5 py-3 text-right text-xs font-bold text-slate-500">100%</td>
+                      </tr>
+                    </tfoot>
+                  </table>
                 </div>
               ) : (
-                <div className="h-72 flex items-center justify-center text-slate-400">
-                  <div className="text-center">
-                    <Database size={40} className="mx-auto mb-2 opacity-30" />
-                    <p className="text-sm">Belum ada data spare part</p>
-                  </div>
+                <div className="py-16 flex flex-col items-center justify-center text-slate-400">
+                  <Database size={40} className="mb-2 opacity-30" />
+                  <p className="text-sm">Belum ada data spare part</p>
                 </div>
               )}
             </div>
@@ -721,87 +723,89 @@ const Reports: React.FC<ReportsProps> = ({ services, trucks }) => {
       )}
 
       {/* TABLE VIEW */}
-      {activeTab === 'table' && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-          <div className="p-5 border-b border-slate-100 flex justify-between items-center">
-            <div>
-              <h2 className="text-base font-bold text-slate-800">Rincian Data Service</h2>
-              <p className="text-xs text-slate-400 mt-0.5">
-                {filteredServices.length} data ditemukan
-                {(fromMonth !== 'all' || toMonth !== 'all') && ` • Bulan ${fromMonth === 'all' ? 1 : fromMonth} s/d ${toMonth === 'all' ? 12 : toMonth}`}
-                {` • Tahun ${yearFilter}`}
-              </p>
+      {
+        activeTab === 'table' && (
+          <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+            <div className="p-5 border-b border-slate-100 flex justify-between items-center">
+              <div>
+                <h2 className="text-base font-bold text-slate-800">Rincian Data Service</h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {filteredServices.length} data ditemukan
+                  {(fromMonth !== 'all' || toMonth !== 'all') && ` • Bulan ${fromMonth === 'all' ? 1 : fromMonth} s/d ${toMonth === 'all' ? 12 : toMonth}`}
+                  {` • Tahun ${yearFilter}`}
+                </p>
+              </div>
+              <span className="px-3 py-1 text-xs font-bold bg-slate-100 text-slate-600 rounded-full">
+                {filteredServices.length} record
+              </span>
             </div>
-            <span className="px-3 py-1 text-xs font-bold bg-slate-100 text-slate-600 rounded-full">
-              {filteredServices.length} record
-            </span>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
-                <tr>
-                  <th className="px-5 py-3.5 font-semibold text-xs uppercase tracking-wider">Tanggal</th>
-                  <th className="px-5 py-3.5 font-semibold text-xs uppercase tracking-wider">No Polisi</th>
-                  <th className="px-5 py-3.5 font-semibold text-xs uppercase tracking-wider">Mekanik</th>
-                  <th className="px-5 py-3.5 font-semibold text-xs uppercase tracking-wider">Jenis Pekerjaan</th>
-                  <th className="px-5 py-3.5 font-semibold text-xs uppercase tracking-wider text-right">Biaya Parts</th>
-                  <th className="px-5 py-3.5 font-semibold text-xs uppercase tracking-wider text-right">Biaya Jasa</th>
-                  <th className="px-5 py-3.5 font-semibold text-xs uppercase tracking-wider text-right">Total</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {filteredServices.length > 0 ? filteredServices.map((s, idx) => (
-                  <tr key={s.id} className="hover:bg-slate-50 transition-colors group">
-                    <td className="px-5 py-3.5 text-slate-600">
-                      <span className="flex items-center gap-1.5">
-                        <Calendar size={13} className="text-slate-300" />
-                        {s.serviceDate}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 font-semibold text-slate-800">{trucks.find(t => t.id === s.truckId)?.plateNumber}</td>
-                    <td className="px-5 py-3.5 text-slate-500">{s.mechanic || '-'}</td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex flex-wrap gap-1">
-                        {s.serviceTypes.slice(0, 2).map((type, i) => (
-                          <span key={i} className="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-md text-[10px] font-semibold uppercase tracking-wider">{type}</span>
-                        ))}
-                        {s.serviceTypes.length > 2 && <span className="text-[10px] text-slate-400 self-center font-medium">+{s.serviceTypes.length - 2}</span>}
-                      </div>
-                    </td>
-                    <td className="px-5 py-3.5 text-right text-slate-600 font-mono text-xs">{formatCurrency(s.parts.reduce((sum, p) => sum + p.price * p.quantity, 0))}</td>
-                    <td className="px-5 py-3.5 text-right text-slate-600 font-mono text-xs">{formatCurrency(s.laborCost)}</td>
-                    <td className="px-5 py-3.5 text-right font-bold text-slate-800">{formatCurrency(s.totalCost)}</td>
-                  </tr>
-                )) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
                   <tr>
-                    <td colSpan={7} className="px-5 py-16 text-center">
-                      <div className="flex flex-col items-center">
-                        <div className="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center mb-3">
-                          <Table2 size={28} className="text-slate-300" />
+                    <th className="px-5 py-3.5 font-semibold text-xs uppercase tracking-wider">Tanggal</th>
+                    <th className="px-5 py-3.5 font-semibold text-xs uppercase tracking-wider">No Polisi</th>
+                    <th className="px-5 py-3.5 font-semibold text-xs uppercase tracking-wider">Mekanik</th>
+                    <th className="px-5 py-3.5 font-semibold text-xs uppercase tracking-wider">Jenis Pekerjaan</th>
+                    <th className="px-5 py-3.5 font-semibold text-xs uppercase tracking-wider text-right">Biaya Parts</th>
+                    <th className="px-5 py-3.5 font-semibold text-xs uppercase tracking-wider text-right">Biaya Jasa</th>
+                    <th className="px-5 py-3.5 font-semibold text-xs uppercase tracking-wider text-right">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {filteredServices.length > 0 ? filteredServices.map((s, idx) => (
+                    <tr key={s.id} className="hover:bg-slate-50 transition-colors group">
+                      <td className="px-5 py-3.5 text-slate-600">
+                        <span className="flex items-center gap-1.5">
+                          <Calendar size={13} className="text-slate-300" />
+                          {s.serviceDate}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 font-semibold text-slate-800">{trucks.find(t => t.id === s.truckId)?.plateNumber}</td>
+                      <td className="px-5 py-3.5 text-slate-500">{s.mechanic || '-'}</td>
+                      <td className="px-5 py-3.5">
+                        <div className="flex flex-wrap gap-1">
+                          {s.serviceTypes.slice(0, 2).map((type, i) => (
+                            <span key={i} className="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-md text-[10px] font-semibold uppercase tracking-wider">{type}</span>
+                          ))}
+                          {s.serviceTypes.length > 2 && <span className="text-[10px] text-slate-400 self-center font-medium">+{s.serviceTypes.length - 2}</span>}
                         </div>
-                        <p className="text-sm font-medium text-slate-500">Tidak ada data service</p>
-                        <p className="text-xs text-slate-400 mt-1">Coba ubah filter bulan atau tahun</p>
-                      </div>
-                    </td>
-                  </tr>
+                      </td>
+                      <td className="px-5 py-3.5 text-right text-slate-600 font-mono text-xs">{formatCurrency(s.parts.reduce((sum, p) => sum + p.price * p.quantity, 0))}</td>
+                      <td className="px-5 py-3.5 text-right text-slate-600 font-mono text-xs">{formatCurrency(s.laborCost)}</td>
+                      <td className="px-5 py-3.5 text-right font-bold text-slate-800">{formatCurrency(s.totalCost)}</td>
+                    </tr>
+                  )) : (
+                    <tr>
+                      <td colSpan={7} className="px-5 py-16 text-center">
+                        <div className="flex flex-col items-center">
+                          <div className="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center mb-3">
+                            <Table2 size={28} className="text-slate-300" />
+                          </div>
+                          <p className="text-sm font-medium text-slate-500">Tidak ada data service</p>
+                          <p className="text-xs text-slate-400 mt-1">Coba ubah filter bulan atau tahun</p>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+                {filteredServices.length > 0 && (
+                  <tfoot className="bg-slate-50 border-t-2 border-slate-200">
+                    <tr>
+                      <td colSpan={4} className="px-5 py-3.5 font-bold text-slate-700 uppercase text-xs tracking-wider">Total Keseluruhan</td>
+                      <td className="px-5 py-3.5 text-right font-bold text-slate-700 font-mono text-xs">{formatCurrency(totalPartsCost)}</td>
+                      <td className="px-5 py-3.5 text-right font-bold text-slate-700 font-mono text-xs">{formatCurrency(totalLaborCost)}</td>
+                      <td className="px-5 py-3.5 text-right font-bold text-indigo-700 text-base">{formatCurrency(totalCost)}</td>
+                    </tr>
+                  </tfoot>
                 )}
-              </tbody>
-              {filteredServices.length > 0 && (
-                <tfoot className="bg-slate-50 border-t-2 border-slate-200">
-                  <tr>
-                    <td colSpan={4} className="px-5 py-3.5 font-bold text-slate-700 uppercase text-xs tracking-wider">Total Keseluruhan</td>
-                    <td className="px-5 py-3.5 text-right font-bold text-slate-700 font-mono text-xs">{formatCurrency(totalPartsCost)}</td>
-                    <td className="px-5 py-3.5 text-right font-bold text-slate-700 font-mono text-xs">{formatCurrency(totalLaborCost)}</td>
-                    <td className="px-5 py-3.5 text-right font-bold text-indigo-700 text-base">{formatCurrency(totalCost)}</td>
-                  </tr>
-                </tfoot>
-              )}
-            </table>
+              </table>
+            </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
-    </div>
+    </div >
   );
 };
 
