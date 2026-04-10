@@ -100,7 +100,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             const { id, truckId, serviceDate, odometer, serviceTypes, description, parts = [], laborCost, totalCost, mechanic, tireUsages = [] } = body;
 
-            if (!id || !truckId || !serviceDate || !odometer || !serviceTypes || !description || !mechanic) {
+            if (!id || !truckId || !serviceDate || odometer === undefined || !serviceTypes || description === undefined || !mechanic) {
                 return res.status(400).json({ error: 'Missing required service record fields' });
             }
 
