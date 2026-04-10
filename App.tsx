@@ -7,7 +7,8 @@ import ServiceHistory from './components/ServiceHistory';
 import Reports from './components/Reports';
 import ClientManagement from './components/ClientManagement';
 import InputService from './components/InputService';
-import { ViewState, Truck, ServiceRecord, Client } from './types';
+import TireStockManagement from './components/TireStockManagement';
+import { ViewState, Truck, ServiceRecord, Client, TireStock } from './types';
 import { api } from './lib/api';
 
 const App: React.FC = () => {
@@ -24,6 +25,7 @@ const App: React.FC = () => {
   const [trucks, setTrucks] = useState<Truck[]>([]);
   const [services, setServices] = useState<ServiceRecord[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
+  const [tireStock, setTireStock] = useState<TireStock[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,14 +34,16 @@ const App: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const [trucksData, servicesData, clientsData] = await Promise.all([
+      const [trucksData, servicesData, clientsData, tireStockData] = await Promise.all([
         api.trucks.list(),
         api.services.list(),
         api.clients.list(),
+        api.tireStock.list(),
       ]);
       setTrucks(trucksData);
       setServices(servicesData);
       setClients(clientsData);
+      setTireStock(tireStockData);
     } catch (err: any) {
       console.error('Failed to load data:', err);
       setError(err.message ?? 'Gagal memuat data dari server. Pastikan DATABASE_URL sudah diset di Vercel.');
@@ -74,6 +78,18 @@ const App: React.FC = () => {
     // Refresh trucks to get updated odometer/service dates
     const updatedTrucks = await api.trucks.list();
     setTrucks(updatedTrucks);
+    const updatedTireStock = await api.tireStock.list();
+    setTireStock(updatedTireStock);
+  };
+
+  const handleAddTireStock = async (newTire: TireStock): Promise<void> => {
+    const created = await api.tireStock.create(newTire);
+    setTireStock(prev => [created, ...prev]);
+  };
+
+  const handleDeleteTireStock = async (id: string): Promise<void> => {
+    await api.tireStock.delete(id);
+    setTireStock(prev => prev.filter(t => t.id !== id));
   };
 
   const handleAddClient = async (newClient: Client): Promise<void> => {
@@ -103,6 +119,8 @@ const App: React.FC = () => {
     // Refresh trucks to get updated data
     const updatedTrucks = await api.trucks.list();
     setTrucks(updatedTrucks);
+    const updatedTireStock = await api.tireStock.list();
+    setTireStock(updatedTireStock);
   };
 
   // ── Render ─────────────────────────────────────────────────
@@ -145,7 +163,17 @@ const App: React.FC = () => {
         return (
           <InputService
             trucks={trucks}
+            tireStock={tireStock}
             onAddService={handleAddService}
+          />
+        );
+      case 'tire-stock':
+        return (
+          <TireStockManagement
+            trucks={trucks}
+            tireStock={tireStock}
+            onAddTire={handleAddTireStock}
+            onDeleteTire={handleDeleteTireStock}
           />
         );
       case 'trucks':

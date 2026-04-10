@@ -66,6 +66,30 @@ export interface ServiceRecord {
   laborCost: number;
   totalCost: number;
   mechanic: string;
+  tireUsages?: TireUsage[]; // Ban yang dipakai dalam service ini
 }
 
-export type ViewState = 'dashboard' | 'monitoring' | 'trucks' | 'history' | 'reports' | 'clients' | 'input-service';
+export interface TireStock {
+  id: string;
+  date: string;
+  supplierName: string;
+  itemName: string;
+  quantity: number;
+  serialNumber: string;
+  description: string;
+  price: number;
+  status: 'available' | 'used';
+  usedByTruckId?: string | null;
+  usedDate?: string | null;
+  serviceRecordId?: string | null;
+}
+
+export interface TireUsage {
+  tireStockId: string;
+  serialNumber: string;
+  itemName: string;
+  price: number;
+  supplierName: string;
+}
+
+export type ViewState = 'dashboard' | 'monitoring' | 'trucks' | 'history' | 'reports' | 'clients' | 'input-service' | 'tire-stock';

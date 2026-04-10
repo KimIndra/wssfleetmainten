@@ -75,6 +75,7 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onDel
     const dataToExport = filteredServices.map(s => {
       const truck = trucks.find(t => t.id === s.truckId);
       const partsSummary = s.parts.map(p => `${p.name} (${p.quantity}x)`).join('; ');
+      const tiresSummary = (s.tireUsages ?? []).map(t => `${t.itemName} - ${t.serialNumber || 'No Seri'}`).join('; ');
       return {
         'ID Service': s.id,
         'Tanggal': s.serviceDate,
@@ -85,6 +86,7 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onDel
         'Mekanik': s.mechanic,
         'Deskripsi': s.description,
         'Rincian Sparepart': partsSummary,
+        'Rincian Ban': tiresSummary || '-',
         'Biaya Jasa': s.laborCost,
         'Total Biaya': s.totalCost
       };
@@ -281,10 +283,39 @@ const ServiceHistory: React.FC<ServiceHistoryProps> = ({ services, trucks, onDel
                                 ))}
                               </tbody>
                             </table>
+                            {(service.tireUsages ?? []).length > 0 && (
+                              <div className="mt-4 mb-2">
+                                <h5 className="font-semibold text-gray-700 mb-2">Ban / Tire Change</h5>
+                                <table className="w-full text-sm mb-3">
+                                  <thead className="text-orange-700 bg-orange-50">
+                                    <tr>
+                                      <th className="p-2 text-left">No Seri</th>
+                                      <th className="p-2 text-left">Nama Barang</th>
+                                      <th className="p-2 text-left">Supplier</th>
+                                      <th className="p-2 text-right">Harga</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {service.tireUsages!.map((tire, idx) => (
+                                      <tr key={idx} className="border-b border-orange-100">
+                                        <td className="p-2 font-mono font-medium">{tire.serialNumber || '-'}</td>
+                                        <td className="p-2">{tire.itemName}</td>
+                                        <td className="p-2 text-gray-500">{tire.supplierName}</td>
+                                        <td className="p-2 text-right">{formatCurrency(tire.price)}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
                             <div className="flex justify-end space-y-1 flex-col items-end border-t pt-3">
                               <div className="flex w-64 justify-between text-gray-600">
                                 <span>Total Parts:</span>
                                 <span>{formatCurrency(service.parts.reduce((sum, p) => sum + (p.price * p.quantity), 0))}</span>
+                              </div>
+                              <div className="flex w-64 justify-between text-gray-600">
+                                <span>Total Ban:</span>
+                                <span>{formatCurrency((service.tireUsages ?? []).reduce((sum, t) => sum + t.price, 0))}</span>
                               </div>
                               <div className="flex w-64 justify-between text-gray-600">
                                 <span>Jasa Mekanik:</span>

@@ -41,6 +41,22 @@ const partsTable = pgTable('spare_parts', {
     quantity: integer('quantity').notNull().default(1),
 });
 
+const tireStockTable = pgTable('tire_stock', {
+    id: text('id').primaryKey(),
+    date: text('date').notNull(),
+    supplierName: text('supplier_name').notNull(),
+    itemName: text('item_name').notNull(),
+    quantity: integer('quantity').notNull().default(1),
+    serialNumber: text('serial_number'),
+    description: text('description'),
+    price: real('price').notNull().default(0),
+    status: text('status').notNull().default('available'),
+    usedByTruckId: text('used_by_truck_id'),
+    usedDate: text('used_date'),
+    serviceRecordId: text('service_record_id'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 function getDb() {
     const url = process.env.DATABASE_URL!;
     return drizzle(neon(url.replace(/[&?]channel_binding=[^&]*/g, '')));
@@ -59,9 +75,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (req.method === 'GET') {
             const records = await db.select().from(recordsTable).orderBy(desc(recordsTable.serviceDate));
             const parts = await db.select().from(partsTable);
+            // Also fetch tire stock items that are used (linked to service records)
+            const usedTires = await db.select().from(tireStockTable);
             const result = records.map(r => ({
                 ...r,
                 parts: parts.filter(p => p.serviceRecordId === r.id),
+                tireUsages: usedTires
+                    .filter(t => t.serviceRecordId === r.id && t.status === 'used')
+                    .map(t => ({
+                        tireStockId: t.id,
+                        serialNumber: t.serialNumber ?? '',
+                        itemName: t.itemName,
+                        price: t.price,
+                        supplierName: t.supplierName,
+                    })),
             }));
             return res.status(200).json(result);
         }
@@ -71,7 +98,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
             body = body || {};
 
-            const { id, truckId, serviceDate, odometer, serviceTypes, description, parts = [], laborCost, totalCost, mechanic } = body;
+            const { id, truckId, serviceDate, odometer, serviceTypes, description, parts = [], laborCost, totalCost, mechanic, tireUsages = [] } = body;
 
             if (!id || !truckId || !serviceDate || !odometer || !serviceTypes || !description || !mechanic) {
                 return res.status(400).json({ error: 'Missing required service record fields' });
@@ -84,6 +111,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             if (parts.length > 0) {
                 const newParts = parts.map((p: any) => ({ ...p, serviceRecordId: id }));
                 await db.insert(partsTable).values(newParts);
+            }
+
+            // ── Handle tire usage (Stock OUT) ────────────────────────
+            if (tireUsages.length > 0) {
+                for (const tire of tireUsages) {
+                    await db.update(tireStockTable).set({
+                        status: 'used',
+                        usedByTruckId: truckId,
+                        usedDate: serviceDate,
+                        serviceRecordId: id,
+                    }).where(eq(tireStockTable.id, tire.tireStockId));
+                }
             }
 
             // Update truck
@@ -108,7 +147,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
 
             const insertedParts = await db.select().from(partsTable).where(eq(partsTable.serviceRecordId, id));
-            return res.status(201).json({ ...created, parts: insertedParts });
+            // Fetch used tires for this service
+            const usedTiresForService = await db.select().from(tireStockTable).where(eq(tireStockTable.serviceRecordId, id));
+            return res.status(201).json({
+                ...created,
+                parts: insertedParts,
+                tireUsages: usedTiresForService.map(t => ({
+                    tireStockId: t.id,
+                    serialNumber: t.serialNumber ?? '',
+                    itemName: t.itemName,
+                    price: t.price,
+                    supplierName: t.supplierName,
+                })),
+            });
         }
 
         return res.status(405).json({ error: 'Method not allowed' });

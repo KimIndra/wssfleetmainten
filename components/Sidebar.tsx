@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Truck, History, FileBarChart, Activity, LogOut, Users, Wrench } from 'lucide-react';
+import { LayoutDashboard, Truck, History, FileBarChart, Activity, LogOut, Users, Wrench, Package } from 'lucide-react';
 import { ViewState } from '../types';
 
 interface SidebarProps {
@@ -12,6 +12,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange }) => {
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
     { id: 'monitoring', label: 'Monitoring Service', icon: <Activity size={20} /> },
     { id: 'input-service', label: 'Input Service', icon: <Wrench size={20} /> },
+    { id: 'tire-stock', label: 'Stock Ban', icon: <Package size={20} /> },
     { id: 'trucks', label: 'Data Armada', icon: <Truck size={20} /> },
     { id: 'clients', label: 'Kelola Client', icon: <Users size={20} /> },
     { id: 'history', label: 'Riwayat Service', icon: <History size={20} /> },

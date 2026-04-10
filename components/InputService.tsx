@@ -1,10 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ServiceRecord, Truck, SparePart } from '../types';
+import { ServiceRecord, Truck, SparePart, TireStock, TireUsage } from '../types';
 import { formatCurrency } from '../utils';
-import { Plus, Trash2, Save, Wrench, Check, CheckCircle, Search, X, Truck as TruckIcon, Calendar, Gauge, UserRound, FileText, Package, DollarSign, ArrowRight, RotateCcw, Sparkles } from 'lucide-react';
+import {
+    Plus, Trash2, Save, Wrench, Check, CheckCircle, Search, X,
+    Truck as TruckIcon, Calendar, Gauge, UserRound, FileText, Package,
+    DollarSign, RotateCcw, Disc, AlertCircle
+} from 'lucide-react';
 
 interface InputServiceProps {
     trucks: Truck[];
+    tireStock: TireStock[];
     onAddService: (service: ServiceRecord) => Promise<void>;
 }
 
@@ -14,7 +19,7 @@ const SERVICE_CATEGORIES = [
     'Suspension', 'Body Repair', 'Other'
 ];
 
-const InputService: React.FC<InputServiceProps> = ({ trucks, onAddService }) => {
+const InputService: React.FC<InputServiceProps> = ({ trucks, tireStock, onAddService }) => {
     const [formTruckId, setFormTruckId] = useState('');
     const [formDate, setFormDate] = useState(new Date().toISOString().split('T')[0]);
     const [formOdo, setFormOdo] = useState<number>(0);
@@ -25,19 +30,24 @@ const InputService: React.FC<InputServiceProps> = ({ trucks, onAddService }) => 
     const [formParts, setFormParts] = useState<Partial<SparePart>[]>([
         { id: Date.now().toString(), name: '', partNumber: '', quantity: 1, price: 0 }
     ]);
+    const [selectedTires, setSelectedTires] = useState<TireUsage[]>([]);
+    const [tireSearch, setTireSearch] = useState('');
+    const [showTireSuggestions, setShowTireSuggestions] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
 
-    // Search suggestion state
+    // Truck search
     const [truckSearch, setTruckSearch] = useState('');
     const [showSuggestions, setShowSuggestions] = useState(false);
     const suggestionsRef = useRef<HTMLDivElement>(null);
+    const tireSuggestionsRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
-            if (suggestionsRef.current && !suggestionsRef.current.contains(e.target as Node)) {
+            if (suggestionsRef.current && !suggestionsRef.current.contains(e.target as Node))
                 setShowSuggestions(false);
-            }
+            if (tireSuggestionsRef.current && !tireSuggestionsRef.current.contains(e.target as Node))
+                setShowTireSuggestions(false);
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -55,6 +65,20 @@ const InputService: React.FC<InputServiceProps> = ({ trucks, onAddService }) => 
             if (truck) setFormOdo(truck.currentOdometer);
         }
     }, [formTruckId, trucks]);
+
+    const isTireChangeSelected = formSelectedTypes.includes('Tire Change');
+
+    // Available tires (not yet selected, status === available)
+    const availableTires = tireStock.filter(t =>
+        t.status === 'available' &&
+        !selectedTires.some(st => st.tireStockId === t.id) &&
+        (
+            !tireSearch ||
+            (t.serialNumber ?? '').toLowerCase().includes(tireSearch.toLowerCase()) ||
+            t.itemName.toLowerCase().includes(tireSearch.toLowerCase()) ||
+            t.supplierName.toLowerCase().includes(tireSearch.toLowerCase())
+        )
+    );
 
     const toggleServiceType = (type: string) => {
         setFormSelectedTypes(prev =>
@@ -78,8 +102,25 @@ const InputService: React.FC<InputServiceProps> = ({ trucks, onAddService }) => 
         setFormParts(newParts);
     };
 
+    const handleSelectTire = (tire: TireStock) => {
+        setSelectedTires(prev => [...prev, {
+            tireStockId: tire.id,
+            serialNumber: tire.serialNumber ?? '',
+            itemName: tire.itemName,
+            price: tire.price,
+            supplierName: tire.supplierName,
+        }]);
+        setTireSearch('');
+        setShowTireSuggestions(false);
+    };
+
+    const handleRemoveTire = (tireStockId: string) => {
+        setSelectedTires(prev => prev.filter(t => t.tireStockId !== tireStockId));
+    };
+
     const partsSubtotal = formParts.reduce((sum, part) => sum + ((part.price || 0) * (part.quantity || 0)), 0);
-    const totalCost = partsSubtotal + formLaborCost;
+    const tiresSubtotal = selectedTires.reduce((sum, t) => sum + t.price, 0);
+    const totalCost = partsSubtotal + tiresSubtotal + formLaborCost;
 
     const resetForm = () => {
         setFormTruckId('');
@@ -91,6 +132,8 @@ const InputService: React.FC<InputServiceProps> = ({ trucks, onAddService }) => 
         setFormDescription('');
         setFormLaborCost(0);
         setFormParts([{ id: Date.now().toString(), name: '', partNumber: '', quantity: 1, price: 0 }]);
+        setSelectedTires([]);
+        setTireSearch('');
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -100,10 +143,12 @@ const InputService: React.FC<InputServiceProps> = ({ trucks, onAddService }) => 
             alert('Mohon pilih setidaknya satu jenis service.');
             return;
         }
-
         if (!formTruckId) {
             alert('Mohon pilih armada terlebih dahulu.');
             return;
+        }
+        if (isTireChangeSelected && selectedTires.length === 0) {
+            if (!window.confirm('Jenis Service "Tire Change" dipilih tapi tidak ada ban yang dipilih dari stok. Lanjutkan?')) return;
         }
 
         const validParts = formParts.filter(p => p.name && p.price);
@@ -118,7 +163,8 @@ const InputService: React.FC<InputServiceProps> = ({ trucks, onAddService }) => 
             mechanic: formMechanic,
             parts: validParts as SparePart[],
             laborCost: formLaborCost,
-            totalCost: totalCost
+            totalCost: totalCost,
+            tireUsages: selectedTires,
         };
 
         setIsSubmitting(true);
@@ -136,7 +182,6 @@ const InputService: React.FC<InputServiceProps> = ({ trucks, onAddService }) => 
 
     const selectedTruck = trucks.find(t => t.id === formTruckId);
 
-    // Step indicator helper
     const StepBadge = ({ num, label, icon: Icon, done }: { num: number; label: string; icon: any; done: boolean }) => (
         <div className="flex items-center gap-3 mb-5">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${done ? 'bg-green-500 text-white' : 'bg-blue-600 text-white'}`}>
@@ -201,11 +246,8 @@ const InputService: React.FC<InputServiceProps> = ({ trucks, onAddService }) => 
                                         onFocus={() => setShowSuggestions(true)}
                                     />
                                     {formTruckId && (
-                                        <button
-                                            type="button"
-                                            className="absolute right-3 top-3 text-slate-400 hover:text-red-500 transition-colors"
-                                            onClick={() => { setFormTruckId(''); setTruckSearch(''); }}
-                                        >
+                                        <button type="button" className="absolute right-3 top-3 text-slate-400 hover:text-red-500 transition-colors"
+                                            onClick={() => { setFormTruckId(''); setTruckSearch(''); }}>
                                             <X size={16} />
                                         </button>
                                     )}
@@ -213,17 +255,9 @@ const InputService: React.FC<InputServiceProps> = ({ trucks, onAddService }) => 
                                 {showSuggestions && truckSearch && (
                                     <div className="absolute z-20 w-full mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl max-h-52 overflow-y-auto">
                                         {filteredTrucks.length > 0 ? filteredTrucks.map(t => (
-                                            <button
-                                                key={t.id}
-                                                type="button"
-                                                className={`w-full text-left px-4 py-3 hover:bg-blue-50 flex justify-between items-center transition-colors border-b border-slate-50 last:border-0 ${formTruckId === t.id ? 'bg-blue-50 text-blue-700' : 'text-slate-700'
-                                                    }`}
-                                                onClick={() => {
-                                                    setFormTruckId(t.id);
-                                                    setTruckSearch(`${t.plateNumber} — ${t.brand} ${t.model}`);
-                                                    setShowSuggestions(false);
-                                                }}
-                                            >
+                                            <button key={t.id} type="button"
+                                                className={`w-full text-left px-4 py-3 hover:bg-blue-50 flex justify-between items-center transition-colors border-b border-slate-50 last:border-0 ${formTruckId === t.id ? 'bg-blue-50 text-blue-700' : 'text-slate-700'}`}
+                                                onClick={() => { setFormTruckId(t.id); setTruckSearch(`${t.plateNumber} — ${t.brand} ${t.model}`); setShowSuggestions(false); }}>
                                                 <div className="flex items-center gap-2">
                                                     <TruckIcon size={14} className="text-slate-400" />
                                                     <span className="font-semibold">{t.plateNumber}</span>
@@ -248,13 +282,9 @@ const InputService: React.FC<InputServiceProps> = ({ trucks, onAddService }) => 
                                 <label className="block text-sm font-medium text-slate-600 mb-1.5">
                                     <span className="flex items-center gap-1.5"><Calendar size={14} /> Tanggal Service <span className="text-red-400">*</span></span>
                                 </label>
-                                <input
-                                    type="date"
-                                    required
+                                <input type="date" required
                                     className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-slate-50 focus:bg-white"
-                                    value={formDate}
-                                    onChange={e => setFormDate(e.target.value)}
-                                />
+                                    value={formDate} onChange={e => setFormDate(e.target.value)} />
                             </div>
 
                             {/* Odometer */}
@@ -262,13 +292,9 @@ const InputService: React.FC<InputServiceProps> = ({ trucks, onAddService }) => 
                                 <label className="block text-sm font-medium text-slate-600 mb-1.5">
                                     <span className="flex items-center gap-1.5"><Gauge size={14} /> Odometer (KM) <span className="text-red-400">*</span></span>
                                 </label>
-                                <input
-                                    type="number"
-                                    required
+                                <input type="number" required
                                     className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-slate-50 focus:bg-white"
-                                    value={formOdo}
-                                    onChange={e => setFormOdo(parseInt(e.target.value))}
-                                />
+                                    value={formOdo} onChange={e => setFormOdo(parseInt(e.target.value))} />
                                 {selectedTruck && (
                                     <p className="text-xs text-slate-400 mt-1.5 flex items-center gap-1">
                                         <Gauge size={11} /> Terakhir: {selectedTruck.currentOdometer.toLocaleString()} KM
@@ -281,14 +307,9 @@ const InputService: React.FC<InputServiceProps> = ({ trucks, onAddService }) => 
                                 <label className="block text-sm font-medium text-slate-600 mb-1.5">
                                     <span className="flex items-center gap-1.5"><UserRound size={14} /> Nama Mekanik / Bengkel <span className="text-red-400">*</span></span>
                                 </label>
-                                <input
-                                    type="text"
-                                    required
-                                    placeholder="Contoh: Pak Budi / Bengkel Resmi"
+                                <input type="text" required placeholder="Contoh: Pak Budi / Bengkel Resmi"
                                     className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-slate-50 focus:bg-white"
-                                    value={formMechanic}
-                                    onChange={e => setFormMechanic(e.target.value)}
-                                />
+                                    value={formMechanic} onChange={e => setFormMechanic(e.target.value)} />
                             </div>
                         </div>
                     </div>
@@ -301,22 +322,28 @@ const InputService: React.FC<InputServiceProps> = ({ trucks, onAddService }) => 
                             <div className="flex flex-wrap gap-2">
                                 {SERVICE_CATEGORIES.map(type => {
                                     const isSelected = formSelectedTypes.includes(type);
+                                    const isTire = type === 'Tire Change';
                                     return (
-                                        <button
-                                            key={type}
-                                            type="button"
-                                            onClick={() => toggleServiceType(type)}
+                                        <button key={type} type="button" onClick={() => toggleServiceType(type)}
                                             className={`px-4 py-2 rounded-full text-sm font-medium border-2 transition-all flex items-center gap-1.5 cursor-pointer
                                                 ${isSelected
-                                                    ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-100 scale-105'
-                                                    : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300 hover:text-blue-600'}`}
-                                        >
+                                                    ? isTire
+                                                        ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-100 scale-105'
+                                                        : 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-100 scale-105'
+                                                    : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300 hover:text-blue-600'}`}>
                                             {isSelected && <Check size={14} />}
+                                            {isTire && <Disc size={13} />}
                                             {type}
                                         </button>
                                     );
                                 })}
                             </div>
+                            {isTireChangeSelected && (
+                                <div className="mt-3 flex items-center gap-2 text-sm text-orange-600 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2">
+                                    <AlertCircle size={15} />
+                                    <span>Pilih ban dari stok di bagian <strong>Section 3: Ban dari Stok</strong> di bawah.</span>
+                                </div>
+                            )}
                             {formSelectedTypes.length > 0 && (
                                 <div className="mt-3 flex flex-wrap gap-1.5">
                                     <span className="text-xs text-slate-400">Terpilih:</span>
@@ -331,30 +358,118 @@ const InputService: React.FC<InputServiceProps> = ({ trucks, onAddService }) => 
                                 </label>
                                 <textarea
                                     className="w-full border border-slate-200 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-slate-50 focus:bg-white"
-                                    rows={3}
-                                    placeholder="Catatan detail pekerjaan yang dilakukan..."
-                                    value={formDescription}
-                                    onChange={e => setFormDescription(e.target.value)}
-                                />
+                                    rows={3} placeholder="Catatan detail pekerjaan yang dilakukan..."
+                                    value={formDescription} onChange={e => setFormDescription(e.target.value)} />
                             </div>
                         </div>
                     </div>
 
-                    {/* Section 3: Suku Cadang */}
+                    {/* Section 3: Ban dari Stok (tampil selalu, highlight jika Tire Change dipilih) */}
+                    <div className={`rounded-xl shadow-sm border p-6 hover:shadow-md transition-shadow ${isTireChangeSelected ? 'bg-orange-50 border-orange-200' : 'bg-white border-slate-100'}`}>
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-3">
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${selectedTires.length > 0 ? 'bg-green-500 text-white' : isTireChangeSelected ? 'bg-orange-500 text-white' : 'bg-slate-300 text-white'}`}>
+                                    {selectedTires.length > 0 ? <Check size={16} /> : <Disc size={16} />}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Disc size={18} className={selectedTires.length > 0 ? 'text-green-500' : isTireChangeSelected ? 'text-orange-500' : 'text-slate-400'} />
+                                    <h3 className="text-base font-semibold text-slate-800">
+                                        Ban dari Stok
+                                        {isTireChangeSelected && <span className="ml-2 text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">Tire Change dipilih</span>}
+                                    </h3>
+                                </div>
+                            </div>
+                            <span className="text-sm text-slate-500 font-medium">
+                                {tireStock.filter(t => t.status === 'available').length} unit tersedia
+                            </span>
+                        </div>
+
+                        <div className="pl-11 space-y-3">
+                            {/* Search Tire from Stock */}
+                            <div className="relative" ref={tireSuggestionsRef}>
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
+                                    <input
+                                        type="text"
+                                        placeholder="Ketik No Seri / Nama Ban untuk pilih dari stok..."
+                                        className={`w-full pl-9 pr-3 py-2.5 border rounded-lg text-sm outline-none transition-all ${isTireChangeSelected ? 'border-orange-300 bg-white focus:ring-2 focus:ring-orange-400' : 'border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-400'}`}
+                                        value={tireSearch}
+                                        onChange={e => { setTireSearch(e.target.value); setShowTireSuggestions(true); }}
+                                        onFocus={() => setShowTireSuggestions(true)}
+                                    />
+                                </div>
+                                {showTireSuggestions && tireSearch && (
+                                    <div className="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-52 overflow-y-auto">
+                                        {availableTires.length > 0 ? availableTires.map(t => (
+                                            <button key={t.id} type="button" onClick={() => handleSelectTire(t)}
+                                                className="w-full text-left px-4 py-3 hover:bg-orange-50 flex items-center justify-between transition-colors border-b border-slate-50 last:border-0">
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-mono font-bold text-blue-700 text-sm bg-blue-50 px-1.5 py-0.5 rounded">{t.serialNumber || '-'}</span>
+                                                        <span className="font-medium text-slate-800 text-sm">{t.itemName}</span>
+                                                    </div>
+                                                    <span className="text-xs text-slate-400 mt-0.5">{t.supplierName}</span>
+                                                </div>
+                                                <span className="text-sm font-semibold text-slate-700">{formatCurrency(t.price)}</span>
+                                            </button>
+                                        )) : (
+                                            <div className="px-4 py-4 text-sm text-slate-400 italic text-center">
+                                                Tidak ada ban tersedia di stok
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Selected Tires */}
+                            {selectedTires.length > 0 && (
+                                <div className="space-y-2">
+                                    <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Ban yang dipilih:</p>
+                                    {selectedTires.map(tire => (
+                                        <div key={tire.tireStockId} className="flex items-center justify-between bg-white border border-orange-200 rounded-lg px-4 py-2.5 shadow-sm">
+                                            <div className="flex items-center gap-3">
+                                                <Disc size={16} className="text-orange-500" />
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded text-xs">{tire.serialNumber || '-'}</span>
+                                                        <span className="font-medium text-slate-800 text-sm">{tire.itemName}</span>
+                                                    </div>
+                                                    <span className="text-xs text-slate-400">{tire.supplierName}</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <span className="font-semibold text-slate-700 text-sm">{formatCurrency(tire.price)}</span>
+                                                <button type="button" onClick={() => handleRemoveTire(tire.tireStockId)}
+                                                    className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors">
+                                                    <X size={14} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    <div className="flex justify-end text-sm">
+                                        <span className="text-slate-500">Subtotal Ban: </span>
+                                        <span className="font-bold text-slate-800 ml-2">{formatCurrency(tiresSubtotal)}</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {selectedTires.length === 0 && (
+                                <p className="text-sm text-slate-400 italic">Belum ada ban dipilih dari stok. Ketik di kotak pencarian untuk memilih.</p>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Section 4: Suku Cadang */}
                     <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 hover:shadow-md transition-shadow">
                         <div className="flex items-center justify-between">
-                            <StepBadge num={3} label="Suku Cadang & Material" icon={Package} done={formParts.some(p => !!p.name)} />
-                            <button
-                                type="button"
-                                onClick={handleAddPart}
-                                className="text-sm bg-blue-50 text-blue-600 px-3.5 py-2 rounded-lg hover:bg-blue-100 flex items-center gap-1.5 font-medium transition-colors cursor-pointer border border-blue-100 hover:border-blue-200 mb-5"
-                            >
+                            <StepBadge num={4} label="Suku Cadang & Material Lain" icon={Package} done={formParts.some(p => !!p.name)} />
+                            <button type="button" onClick={handleAddPart}
+                                className="text-sm bg-blue-50 text-blue-600 px-3.5 py-2 rounded-lg hover:bg-blue-100 flex items-center gap-1.5 font-medium transition-colors cursor-pointer border border-blue-100 hover:border-blue-200 mb-5">
                                 <Plus size={15} /> Tambah Baris
                             </button>
                         </div>
 
                         <div className="pl-11 space-y-3">
-                            {/* Table header for desktop */}
                             <div className="hidden md:grid md:grid-cols-12 gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 pb-1">
                                 <div className="col-span-4">Nama Part</div>
                                 <div className="col-span-2">Kode Part</div>
@@ -368,60 +483,44 @@ const InputService: React.FC<InputServiceProps> = ({ trucks, onAddService }) => 
                                 <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-center bg-slate-50 p-3 rounded-lg border border-slate-100 hover:border-slate-200 transition-colors group">
                                     <div className="col-span-4">
                                         <label className="text-xs text-slate-400 block mb-1 md:hidden">Nama Part</label>
-                                        <input
-                                            type="text"
-                                            placeholder="Nama barang"
+                                        <input type="text" placeholder="Nama barang"
                                             className="w-full border border-slate-200 p-2 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                                             value={part.name}
-                                            onChange={e => handlePartChange(index, 'name', e.target.value)}
-                                        />
+                                            onChange={e => handlePartChange(index, 'name', e.target.value)} />
                                     </div>
                                     <div className="col-span-2">
                                         <label className="text-xs text-slate-400 block mb-1 md:hidden">Kode Part</label>
-                                        <input
-                                            type="text"
-                                            placeholder="Optional"
+                                        <input type="text" placeholder="Optional"
                                             className="w-full border border-slate-200 p-2 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                                             value={part.partNumber}
-                                            onChange={e => handlePartChange(index, 'partNumber', e.target.value)}
-                                        />
+                                            onChange={e => handlePartChange(index, 'partNumber', e.target.value)} />
                                     </div>
                                     <div className="col-span-1">
                                         <label className="text-xs text-slate-400 block mb-1 md:hidden">Qty</label>
-                                        <input
-                                            type="number"
-                                            min="1"
+                                        <input type="number" min="1"
                                             className="w-full border border-slate-200 p-2 rounded-lg text-sm text-center bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                                             value={part.quantity}
-                                            onChange={e => handlePartChange(index, 'quantity', parseInt(e.target.value))}
-                                        />
+                                            onChange={e => handlePartChange(index, 'quantity', parseInt(e.target.value))} />
                                     </div>
                                     <div className="col-span-2">
                                         <label className="text-xs text-slate-400 block mb-1 md:hidden">Harga Satuan</label>
-                                        <input
-                                            type="number"
-                                            min="0"
+                                        <input type="number" min="0"
                                             className="w-full border border-slate-200 p-2 rounded-lg text-sm text-right bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                                             value={part.price}
-                                            onChange={e => handlePartChange(index, 'price', parseInt(e.target.value))}
-                                        />
+                                            onChange={e => handlePartChange(index, 'price', parseInt(e.target.value))} />
                                     </div>
                                     <div className="col-span-2 text-right font-mono text-sm text-slate-700 font-medium px-2">
                                         {formatCurrency((part.price || 0) * (part.quantity || 0))}
                                     </div>
                                     <div className="col-span-1 flex justify-end">
-                                        <button
-                                            type="button"
-                                            onClick={() => handleRemovePart(index)}
+                                        <button type="button" onClick={() => handleRemovePart(index)}
                                             className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer opacity-0 group-hover:opacity-100"
-                                            disabled={formParts.length === 1}
-                                        >
+                                            disabled={formParts.length === 1}>
                                             <Trash2 size={16} />
                                         </button>
                                     </div>
                                 </div>
                             ))}
-
                             <div className="flex justify-end pt-2 pr-3">
                                 <div className="flex items-center gap-2 text-sm">
                                     <span className="text-slate-500">Subtotal Parts:</span>
@@ -431,24 +530,25 @@ const InputService: React.FC<InputServiceProps> = ({ trucks, onAddService }) => 
                         </div>
                     </div>
 
-                    {/* Section 4: Biaya & Total */}
+                    {/* Section 5: Biaya & Total */}
                     <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-sm border border-blue-100 p-6 hover:shadow-md transition-shadow">
-                        <StepBadge num={4} label="Ringkasan Biaya" icon={DollarSign} done={totalCost > 0} />
+                        <StepBadge num={5} label="Ringkasan Biaya" icon={DollarSign} done={totalCost > 0} />
                         <div className="pl-11">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-end">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                                 <div>
                                     <label className="block text-sm font-medium text-slate-600 mb-1.5">Biaya Jasa Mekanik</label>
-                                    <input
-                                        type="number"
-                                        min="0"
+                                    <input type="number" min="0"
                                         className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 text-right font-semibold bg-white outline-none"
                                         value={formLaborCost}
-                                        onChange={e => setFormLaborCost(parseInt(e.target.value))}
-                                    />
+                                        onChange={e => setFormLaborCost(parseInt(e.target.value) || 0)} />
                                 </div>
                                 <div className="bg-white p-4 rounded-xl border border-slate-200 text-center">
                                     <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Subtotal Parts</p>
                                     <p className="text-lg font-bold text-slate-700">{formatCurrency(partsSubtotal)}</p>
+                                </div>
+                                <div className="bg-orange-50 p-4 rounded-xl border border-orange-200 text-center">
+                                    <p className="text-xs text-orange-400 uppercase tracking-wider mb-1">Subtotal Ban</p>
+                                    <p className="text-lg font-bold text-orange-700">{formatCurrency(tiresSubtotal)}</p>
                                 </div>
                                 <div className="bg-gradient-to-br from-blue-600 to-indigo-600 p-4 rounded-xl text-center shadow-lg shadow-blue-200">
                                     <p className="text-xs text-blue-100 uppercase tracking-wider mb-1">Total Biaya</p>
@@ -460,19 +560,12 @@ const InputService: React.FC<InputServiceProps> = ({ trucks, onAddService }) => 
 
                     {/* Submit Buttons */}
                     <div className="flex justify-between items-center pt-2">
-                        <button
-                            type="button"
-                            onClick={resetForm}
-                            disabled={isSubmitting}
-                            className="px-5 py-2.5 text-slate-500 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 font-medium disabled:opacity-50 transition-all flex items-center gap-2 cursor-pointer"
-                        >
+                        <button type="button" onClick={resetForm} disabled={isSubmitting}
+                            className="px-5 py-2.5 text-slate-500 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 font-medium disabled:opacity-50 transition-all flex items-center gap-2 cursor-pointer">
                             <RotateCcw size={16} /> Reset Form
                         </button>
-                        <button
-                            type="submit"
-                            disabled={isSubmitting}
-                            className="px-8 py-3 text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl hover:from-blue-700 hover:to-indigo-700 flex items-center gap-2 font-semibold shadow-lg shadow-blue-200 disabled:opacity-50 transition-all cursor-pointer"
-                        >
+                        <button type="submit" disabled={isSubmitting}
+                            className="px-8 py-3 text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl hover:from-blue-700 hover:to-indigo-700 flex items-center gap-2 font-semibold shadow-lg shadow-blue-200 disabled:opacity-50 transition-all cursor-pointer">
                             {isSubmitting ? (
                                 <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Menyimpan...</>
                             ) : (

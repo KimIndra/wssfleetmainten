@@ -84,6 +84,25 @@ export const spareParts = pgTable('spare_parts', {
     quantity: integer('quantity').notNull().default(1),
 });
 
+// ============================================================
+// TIRE STOCK TABLE
+// ============================================================
+export const tireStock = pgTable('tire_stock', {
+    id: text('id').primaryKey(),
+    date: text('date').notNull(),
+    supplierName: text('supplier_name').notNull(),
+    itemName: text('item_name').notNull(),
+    quantity: integer('quantity').notNull().default(1),
+    serialNumber: text('serial_number'),
+    description: text('description'),
+    price: real('price').notNull().default(0),
+    status: text('status').notNull().default('available'),
+    usedByTruckId: text('used_by_truck_id'),
+    usedDate: text('used_date'),
+    serviceRecordId: text('service_record_id'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 // Types
 export type Client = typeof clients.$inferSelect;
 export type NewClient = typeof clients.$inferInsert;
@@ -95,3 +114,5 @@ export type ServiceRecord = typeof serviceRecords.$inferSelect;
 export type NewServiceRecord = typeof serviceRecords.$inferInsert;
 export type SparePart = typeof spareParts.$inferSelect;
 export type NewSparePart = typeof spareParts.$inferInsert;
+export type TireStockItem = typeof tireStock.$inferSelect;
+export type NewTireStockItem = typeof tireStock.$inferInsert;

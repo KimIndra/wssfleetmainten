@@ -40,4 +40,12 @@ export const api = {
         create: (data: any) => request<any>('/services', { method: 'POST', body: JSON.stringify(data) }),
         delete: (id: string) => request<any>(`/services/${id}`, { method: 'DELETE' }),
     },
+
+    // ── TIRE STOCK ────────────────────────────────────────────
+    tireStock: {
+        list: () => request<any[]>('/tire-stock'),
+        create: (data: any) => request<any>('/tire-stock', { method: 'POST', body: JSON.stringify(data) }),
+        update: (id: string, data: any) => request<any>(`/tire-stock/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+        delete: (id: string) => request<any>(`/tire-stock/${id}`, { method: 'DELETE' }),
+    },
 };

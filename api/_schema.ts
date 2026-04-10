@@ -65,3 +65,20 @@ export const spareParts = pgTable('spare_parts', {
     price: real('price').notNull().default(0),
     quantity: integer('quantity').notNull().default(1),
 });
+
+// ── TIRE STOCK ───────────────────────────────────────────────
+export const tireStock = pgTable('tire_stock', {
+    id: text('id').primaryKey(),
+    date: text('date').notNull(),
+    supplierName: text('supplier_name').notNull(),
+    itemName: text('item_name').notNull(),
+    quantity: integer('quantity').notNull().default(1),
+    serialNumber: text('serial_number'),
+    description: text('description'),
+    price: real('price').notNull().default(0),
+    status: text('status').notNull().default('available'),
+    usedByTruckId: text('used_by_truck_id'),
+    usedDate: text('used_date'),
+    serviceRecordId: text('service_record_id'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+});
