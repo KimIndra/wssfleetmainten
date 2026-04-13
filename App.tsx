@@ -92,6 +92,11 @@ const App: React.FC = () => {
     setTireStock(prev => prev.filter(t => t.id !== id));
   };
 
+  const handleUpdateTireStock = async (id: string, updates: Partial<TireStock>): Promise<void> => {
+    const updated = await api.tireStock.update(id, updates);
+    setTireStock(prev => prev.map(t => t.id === id ? updated : t));
+  };
+
   const handleAddClient = async (newClient: Client): Promise<void> => {
     const created = await api.clients.create(newClient);
     setClients(prev => [...prev, created]);
@@ -174,6 +179,7 @@ const App: React.FC = () => {
             tireStock={tireStock}
             onAddTire={handleAddTireStock}
             onDeleteTire={handleDeleteTireStock}
+            onUpdateTire={handleUpdateTireStock}
           />
         );
       case 'trucks':

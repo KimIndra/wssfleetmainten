@@ -3,7 +3,7 @@ import { TireStock, Truck } from '../types';
 import { formatCurrency } from '../utils';
 import {
     Plus, Trash2, Package, CheckCircle, XCircle,
-    Search, ChevronDown, ChevronUp, Download, Filter, X
+    Search, ChevronDown, ChevronUp, Download, Filter, X, LogOut
 } from 'lucide-react';
 import { api } from '../lib/api';
 
@@ -12,6 +12,7 @@ interface TireStockManagementProps {
     trucks: Truck[];
     onAddTire: (tire: TireStock) => Promise<void>;
     onDeleteTire: (id: string) => Promise<void>;
+    onUpdateTire?: (id: string, updates: Partial<TireStock>) => Promise<void>;
 }
 
 const TireStockManagement: React.FC<TireStockManagementProps> = ({
@@ -19,6 +20,7 @@ const TireStockManagement: React.FC<TireStockManagementProps> = ({
     trucks,
     onAddTire,
     onDeleteTire,
+    onUpdateTire,
 }) => {
     const [activeTab, setActiveTab] = useState<'in' | 'out'>('in');
     const [showForm, setShowForm] = useState(false);
@@ -28,6 +30,7 @@ const TireStockManagement: React.FC<TireStockManagementProps> = ({
     const [filterStatus, setFilterStatus] = useState<'all' | 'available' | 'used'>('all');
 
     // Form state
+    const [formType, setFormType] = useState<'normal' | 'misc_in'>('normal');
     const [formDate, setFormDate] = useState(new Date().toISOString().split('T')[0]);
     const [formSupplier, setFormSupplier] = useState('');
     const [formItemName, setFormItemName] = useState('');
@@ -35,6 +38,10 @@ const TireStockManagement: React.FC<TireStockManagementProps> = ({
     const [formSerial, setFormSerial] = useState('');
     const [formDesc, setFormDesc] = useState('');
     const [formPrice, setFormPrice] = useState(0);
+
+    // Misc out state
+    const [miscOutTire, setMiscOutTire] = useState<TireStock | null>(null);
+    const [miscOutDesc, setMiscOutDesc] = useState('');
 
     const resetForm = () => {
         setFormDate(new Date().toISOString().split('T')[0]);
@@ -56,12 +63,12 @@ const TireStockManagement: React.FC<TireStockManagementProps> = ({
         const newTire: TireStock = {
             id: `tire-${Date.now()}`,
             date: formDate,
-            supplierName: formSupplier,
+            supplierName: formType === 'misc_in' && !formSupplier ? 'INTERNAL' : formSupplier,
             itemName: formItemName,
             quantity: formQty,
             serialNumber: formSerial,
-            description: formDesc,
-            price: formPrice,
+            description: formType === 'misc_in' ? `(MISC IN) ${formDesc}` : formDesc,
+            price: formType === 'misc_in' ? 0 : formPrice,
             status: 'available',
         };
         setIsSubmitting(true);
@@ -83,6 +90,25 @@ const TireStockManagement: React.FC<TireStockManagementProps> = ({
             await onDeleteTire(id);
         } catch (err: any) {
             alert('Gagal menghapus: ' + err.message);
+        }
+    };
+
+    const handleMiscOutSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!miscOutTire || !onUpdateTire) return;
+        try {
+            await onUpdateTire(miscOutTire.id, {
+                status: 'used',
+                usedByTruckId: 'MISC-OUT',
+                usedDate: new Date().toISOString().split('T')[0],
+                description: miscOutTire.description 
+                    ? `${miscOutTire.description} | Misc Out: ${miscOutDesc}` 
+                    : `Misc Out: ${miscOutDesc}`
+            });
+            setMiscOutTire(null);
+            setMiscOutDesc('');
+        } catch (err: any) {
+            alert('Gagal Misc Out: ' + err.message);
         }
     };
 
@@ -150,6 +176,49 @@ const TireStockManagement: React.FC<TireStockManagementProps> = ({
                     </div>
                 )}
 
+                {/* Misc Out Modal */}
+                {miscOutTire && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+                        <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+                            <h3 className="text-xl font-bold text-slate-800 mb-2 flex items-center gap-2">
+                                <LogOut className="text-orange-500" /> Misc Out
+                            </h3>
+                            <p className="text-slate-600 text-sm mb-4">
+                                Pengeluaran ban {miscOutTire.itemName} ({miscOutTire.serialNumber || '-'}) secara langsung tanpa transaksi service.
+                            </p>
+                            <form onSubmit={handleMiscOutSubmit}>
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium text-slate-600 mb-1">Keterangan / Alasan Pengeluaran <span className="text-red-400">*</span></label>
+                                    <textarea 
+                                        required 
+                                        autoFocus
+                                        rows={3}
+                                        placeholder="Contoh: Dipakai untuk serep, rusak, dll..."
+                                        className="w-full border border-slate-200 p-3 rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none bg-slate-50 focus:bg-white resize-none"
+                                        value={miscOutDesc}
+                                        onChange={e => setMiscOutDesc(e.target.value)}
+                                    />
+                                </div>
+                                <div className="flex gap-3 justify-end">
+                                    <button 
+                                        type="button" 
+                                        onClick={() => { setMiscOutTire(null); setMiscOutDesc(''); }}
+                                        className="px-4 py-2 text-slate-500 font-medium hover:bg-slate-100 rounded-lg transition"
+                                    >
+                                        Batal
+                                    </button>
+                                    <button 
+                                        type="submit"
+                                        className="px-4 py-2 bg-orange-500 text-white font-semibold rounded-lg hover:bg-orange-600 transition"
+                                    >
+                                        Proses Pengeluaran
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
                 {/* Stats Cards */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                     {[
@@ -173,6 +242,16 @@ const TireStockManagement: React.FC<TireStockManagementProps> = ({
                             <Plus size={18} className="text-orange-500" /> Form Tambah Stock Ban (IN)
                         </h3>
                         <form onSubmit={handleSubmit}>
+                            <div className="mb-5 flex gap-6 p-3 bg-slate-50 rounded-lg border border-slate-100">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name="formType" checked={formType === 'normal'} onChange={() => setFormType('normal')} className="w-4 h-4 text-orange-500 focus:ring-orange-500" /> 
+                                    <span className="font-medium text-slate-700">Pemasukan Normal (Beli)</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name="formType" checked={formType === 'misc_in'} onChange={() => { setFormType('misc_in'); setFormPrice(0); }} className="w-4 h-4 text-orange-500 focus:ring-orange-500" /> 
+                                    <span className="font-medium text-slate-700">Misc In (Tanpa Beli/Retur/Lainnya)</span>
+                                </label>
+                            </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                                 <div>
                                     <label className="block text-sm font-medium text-slate-600 mb-1">Tanggal Masuk <span className="text-red-400">*</span></label>
@@ -181,8 +260,8 @@ const TireStockManagement: React.FC<TireStockManagementProps> = ({
                                         value={formDate} onChange={e => setFormDate(e.target.value)} />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-600 mb-1">Nama Supplier <span className="text-red-400">*</span></label>
-                                    <input type="text" required placeholder="cth: NAJWA MANDIRI BAN"
+                                    <label className="block text-sm font-medium text-slate-600 mb-1">Nama Supplier {formType === 'normal' && <span className="text-red-400">*</span>}</label>
+                                    <input type="text" required={formType === 'normal'} placeholder="cth: NAJWA MANDIRI BAN"
                                         className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none bg-slate-50 focus:bg-white"
                                         value={formSupplier} onChange={e => setFormSupplier(e.target.value.toUpperCase())} />
                                 </div>
@@ -204,12 +283,14 @@ const TireStockManagement: React.FC<TireStockManagementProps> = ({
                                         className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-orange-400 outline-none bg-slate-50 focus:bg-white font-mono"
                                         value={formSerial} onChange={e => setFormSerial(e.target.value.toUpperCase())} />
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-600 mb-1">Harga Satuan (Rp)</label>
-                                    <input type="number" min="0"
-                                        className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-orange-400 outline-none bg-slate-50 focus:bg-white text-right"
-                                        value={formPrice} onChange={e => setFormPrice(parseInt(e.target.value) || 0)} />
-                                </div>
+                                {formType === 'normal' && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-600 mb-1">Harga Satuan (Rp)</label>
+                                        <input type="number" min="0" required={formType === 'normal'}
+                                            className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-orange-400 outline-none bg-slate-50 focus:bg-white text-right"
+                                            value={formPrice} onChange={e => setFormPrice(parseInt(e.target.value) || 0)} />
+                                    </div>
+                                )}
                                 <div className="md:col-span-2 lg:col-span-3">
                                     <label className="block text-sm font-medium text-slate-600 mb-1">Deskripsi / Keterangan</label>
                                     <input type="text" placeholder="Keterangan tambahan..."
@@ -339,12 +420,22 @@ const TireStockManagement: React.FC<TireStockManagementProps> = ({
                                             </td>
                                             <td className="p-4">
                                                 {tire.status === 'available' && (
-                                                    <button
-                                                        onClick={() => handleDelete(tire.id, tire.serialNumber)}
-                                                        className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                                    >
-                                                        <Trash2 size={14} />
-                                                    </button>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => setMiscOutTire(tire)}
+                                                            title="Keluarkan Ban (Misc Out)"
+                                                            className="p-1.5 text-orange-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors border border-transparent hover:border-orange-200"
+                                                        >
+                                                            <LogOut size={16} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDelete(tire.id, tire.serialNumber)}
+                                                            title="Hapus Ban"
+                                                            className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </div>
                                                 )}
                                             </td>
                                         </tr>
