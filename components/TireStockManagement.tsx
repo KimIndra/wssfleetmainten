@@ -22,7 +22,7 @@ const TireStockManagement: React.FC<TireStockManagementProps> = ({
     onDeleteTire,
     onUpdateTire,
 }) => {
-    const [activeTab, setActiveTab] = useState<'in' | 'out'>('in');
+    const [activeTab, setActiveTab] = useState<'in' | 'out' | 'misc_in' | 'misc_out'>('in');
     const [showForm, setShowForm] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
@@ -112,37 +112,39 @@ const TireStockManagement: React.FC<TireStockManagementProps> = ({
         }
     };
 
-    // Filter data
-    const availableTires = tireStock.filter(t => t.status === 'available');
-    const usedTires = tireStock.filter(t => t.status === 'used');
+    const isMiscIn = (t: TireStock) => t.price === 0 || (t.description || '').includes('(MISC IN)');
+    const isMiscOut = (t: TireStock) => t.status === 'used' && t.usedByTruckId === 'MISC-OUT';
 
-    const filteredStock = tireStock.filter(t => {
-        const matchSearch = !searchSerial ||
-            (t.serialNumber ?? '').toLowerCase().includes(searchSerial.toLowerCase()) ||
-            t.itemName.toLowerCase().includes(searchSerial.toLowerCase()) ||
-            t.supplierName.toLowerCase().includes(searchSerial.toLowerCase());
-        const matchStatus = filterStatus === 'all' || t.status === filterStatus;
-        return matchSearch && matchStatus;
-    });
-
-    const displayedTires = activeTab === 'in'
-        ? filteredStock.filter(t => filterStatus === 'all' ? true : t.status === filterStatus)
-        : usedTires.filter(t => {
-            return !searchSerial ||
-                (t.serialNumber ?? '').toLowerCase().includes(searchSerial.toLowerCase()) ||
-                t.itemName.toLowerCase().includes(searchSerial.toLowerCase());
-        });
-
-    const getTruckPlate = (truckId?: string | null) => {
-        if (!truckId) return '-';
-        return trucks.find(t => t.id === truckId)?.plateNumber ?? truckId;
-    };
+    const normalInTires = tireStock.filter(t => !isMiscIn(t));
+    const normalOutTires = tireStock.filter(t => t.status === 'used' && !isMiscOut(t));
+    const miscInTires = tireStock.filter(t => isMiscIn(t));
+    const miscOutTires = tireStock.filter(t => isMiscOut(t));
 
     // Summary stats
-    const totalIn = tireStock.length;
-    const totalAvailable = availableTires.length;
-    const totalUsed = usedTires.length;
-    const totalValue = availableTires.reduce((sum, t) => sum + t.price, 0);
+    const totalValue = normalInTires.filter(t => t.status === 'available').reduce((sum, t) => sum + t.price, 0);
+
+    const getListData = () => {
+        let baseData: TireStock[] = [];
+        if (activeTab === 'in') baseData = normalInTires;
+        else if (activeTab === 'out') baseData = normalOutTires;
+        else if (activeTab === 'misc_in') baseData = miscInTires;
+        else if (activeTab === 'misc_out') baseData = miscOutTires;
+
+        return baseData.filter(t => {
+            const matchSearch = !searchSerial ||
+                (t.serialNumber ?? '').toLowerCase().includes(searchSerial.toLowerCase()) ||
+                t.itemName.toLowerCase().includes(searchSerial.toLowerCase()) ||
+                t.supplierName.toLowerCase().includes(searchSerial.toLowerCase());
+            
+            const matchStatus = (activeTab === 'out' || activeTab === 'misc_out') 
+                ? true 
+                : filterStatus === 'all' || t.status === filterStatus;
+            
+            return matchSearch && matchStatus;
+        });
+    };
+
+    const currentData = getListData();
 
     return (
         <div className="p-6 bg-slate-50 min-h-full">
@@ -222,10 +224,10 @@ const TireStockManagement: React.FC<TireStockManagementProps> = ({
                 {/* Stats Cards */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                     {[
-                        { label: 'Total Masuk', value: totalIn, color: 'from-blue-500 to-blue-600', icon: '📦' },
-                        { label: 'Tersedia', value: totalAvailable, color: 'from-green-500 to-emerald-600', icon: '✅' },
-                        { label: 'Terpakai', value: totalUsed, color: 'from-red-500 to-rose-600', icon: '🚛' },
-                        { label: 'Nilai Stok', value: formatCurrency(totalValue), color: 'from-purple-500 to-indigo-600', icon: '💰', isText: true },
+                        { label: 'Total Stock Masuk', value: normalInTires.length, color: 'from-blue-500 to-blue-600', icon: '📦' },
+                        { label: 'Total Tersedia Aktif', value: tireStock.filter(t => t.status === 'available').length, color: 'from-green-500 to-emerald-600', icon: '✅' },
+                        { label: 'Total Terpakai', value: tireStock.filter(t => t.status === 'used').length, color: 'from-red-500 to-rose-600', icon: '🚛' },
+                        { label: 'Estimasi Nilai Stok', value: formatCurrency(totalValue), color: 'from-purple-500 to-indigo-600', icon: '💰', isText: true },
                     ].map((stat, i) => (
                         <div key={i} className={`bg-gradient-to-br ${stat.color} p-4 rounded-xl text-white shadow-sm`}>
                             <div className="text-2xl mb-1">{stat.icon}</div>
@@ -320,27 +322,49 @@ const TireStockManagement: React.FC<TireStockManagementProps> = ({
 
                 {/* Tabs */}
                 <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-                    <div className="flex border-b border-slate-200">
+                    <div className="flex border-b border-slate-200 overflow-x-auto hide-scrollbar">
                         <button
                             onClick={() => { setActiveTab('in'); setFilterStatus('all'); }}
-                            className={`flex-1 py-3.5 font-semibold text-sm flex items-center justify-center gap-2 transition-colors ${activeTab === 'in'
+                            className={`flex-1 min-w-36 py-3.5 font-semibold text-sm flex items-center justify-center gap-2 transition-colors ${activeTab === 'in'
                                 ? 'bg-orange-50 text-orange-600 border-b-2 border-orange-500'
                                 : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
                         >
                             📦 STOCK BAN IN
                             <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${activeTab === 'in' ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-500'}`}>
-                                {totalIn}
+                                {normalInTires.length}
                             </span>
                         </button>
                         <button
                             onClick={() => { setActiveTab('out'); setSearchSerial(''); }}
-                            className={`flex-1 py-3.5 font-semibold text-sm flex items-center justify-center gap-2 transition-colors ${activeTab === 'out'
+                            className={`flex-1 min-w-36 py-3.5 font-semibold text-sm flex items-center justify-center gap-2 transition-colors ${activeTab === 'out'
                                 ? 'bg-red-50 text-red-600 border-b-2 border-red-500'
                                 : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
                         >
                             🚛 STOCK BAN OUT
                             <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${activeTab === 'out' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-500'}`}>
-                                {totalUsed}
+                                {normalOutTires.length}
+                            </span>
+                        </button>
+                        <button
+                            onClick={() => { setActiveTab('misc_in'); setFilterStatus('all'); }}
+                            className={`flex-1 min-w-36 py-3.5 font-semibold text-sm flex items-center justify-center gap-2 transition-colors ${activeTab === 'misc_in'
+                                ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-500'
+                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
+                        >
+                            📥 MISC IN
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${activeTab === 'misc_in' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'}`}>
+                                {miscInTires.length}
+                            </span>
+                        </button>
+                        <button
+                            onClick={() => { setActiveTab('misc_out'); setSearchSerial(''); }}
+                            className={`flex-1 min-w-36 py-3.5 font-semibold text-sm flex items-center justify-center gap-2 transition-colors ${activeTab === 'misc_out'
+                                ? 'bg-purple-50 text-purple-600 border-b-2 border-purple-500'
+                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
+                        >
+                            📤 MISC OUT
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${activeTab === 'misc_out' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-500'}`}>
+                                {miscOutTires.length}
                             </span>
                         </button>
                     </div>
@@ -357,7 +381,7 @@ const TireStockManagement: React.FC<TireStockManagementProps> = ({
                                 onChange={e => setSearchSerial(e.target.value)}
                             />
                         </div>
-                        {activeTab === 'in' && (
+                        {(activeTab === 'in' || activeTab === 'misc_in') && (
                             <select
                                 className="border border-slate-200 rounded-lg py-2 px-3 text-sm outline-none bg-slate-50 focus:ring-2 focus:ring-orange-400 cursor-pointer"
                                 value={filterStatus}
@@ -372,7 +396,7 @@ const TireStockManagement: React.FC<TireStockManagementProps> = ({
 
                     {/* Table */}
                     <div className="overflow-x-auto">
-                        {activeTab === 'in' ? (
+                        {(activeTab === 'in' || activeTab === 'misc_in') ? (
                             <table className="w-full text-sm text-left">
                                 <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
                                     <tr>
@@ -388,13 +412,13 @@ const TireStockManagement: React.FC<TireStockManagementProps> = ({
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredStock.length === 0 ? (
+                                    {currentData.length === 0 ? (
                                         <tr>
                                             <td colSpan={9} className="p-8 text-center text-slate-400 italic">
                                                 Belum ada data stock ban
                                             </td>
                                         </tr>
-                                    ) : filteredStock.map(tire => (
+                                    ) : currentData.map(tire => (
                                         <tr key={tire.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                                             <td className="p-4 text-slate-700">{tire.date}</td>
                                             <td className="p-4 font-medium text-slate-800">{tire.supplierName}</td>
@@ -443,53 +467,46 @@ const TireStockManagement: React.FC<TireStockManagementProps> = ({
                                 </tbody>
                             </table>
                         ) : (
-                            // STOCK OUT TAB
+                            // STOCK OUT & MISC OUT TABS
                             <table className="w-full text-sm text-left">
                                 <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
                                     <tr>
                                         <th className="p-4 font-semibold">Tgl Pemakaian</th>
-                                        <th className="p-4 font-semibold">No Polisi Truk</th>
+                                        <th className="p-4 font-semibold">Tujuan (No Polisi/Alasan)</th>
                                         <th className="p-4 font-semibold">Nama Barang</th>
                                         <th className="p-4 font-semibold font-mono">No Seri</th>
-                                        <th className="p-4 font-semibold">Supplier</th>
-                                        <th className="p-4 font-semibold text-right">Harga</th>
+                                        <th className="p-4 font-semibold">Supplier Asal</th>
+                                        <th className="p-4 font-semibold text-right">Harga Asal</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {usedTires.filter(t =>
-                                        !searchSerial ||
-                                        (t.serialNumber ?? '').toLowerCase().includes(searchSerial.toLowerCase()) ||
-                                        t.itemName.toLowerCase().includes(searchSerial.toLowerCase())
-                                    ).length === 0 ? (
+                                    {currentData.length === 0 ? (
                                         <tr>
                                             <td colSpan={6} className="p-8 text-center text-slate-400 italic">
                                                 Belum ada ban yang terpakai
                                             </td>
                                         </tr>
-                                    ) : usedTires
-                                        .filter(t =>
-                                            !searchSerial ||
-                                            (t.serialNumber ?? '').toLowerCase().includes(searchSerial.toLowerCase()) ||
-                                            t.itemName.toLowerCase().includes(searchSerial.toLowerCase())
-                                        )
-                                        .map(tire => (
-                                            <tr key={tire.id} className="border-b border-slate-100 hover:bg-slate-50">
-                                                <td className="p-4 text-slate-700">{tire.usedDate || '-'}</td>
-                                                <td className="p-4">
-                                                    <span className="font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg text-sm">
-                                                        {getTruckPlate(tire.usedByTruckId)}
-                                                    </span>
-                                                </td>
-                                                <td className="p-4 font-medium text-slate-800">{tire.itemName}</td>
-                                                <td className="p-4">
-                                                    <span className="font-mono font-bold text-orange-700 bg-orange-50 px-2 py-0.5 rounded text-xs">
-                                                        {tire.serialNumber || '-'}
-                                                    </span>
-                                                </td>
-                                                <td className="p-4 text-slate-600">{tire.supplierName}</td>
-                                                <td className="p-4 text-right font-semibold text-slate-800">{formatCurrency(tire.price)}</td>
-                                            </tr>
-                                        ))}
+                                    ) : currentData.map(tire => (
+                                        <tr key={tire.id} className="border-b border-slate-100 hover:bg-slate-50">
+                                            <td className="p-4 text-slate-700">{tire.usedDate || '-'}</td>
+                                            <td className="p-4">
+                                                <span className={`font-bold px-2.5 py-1 rounded-lg text-sm ${tire.usedByTruckId === 'MISC-OUT' ? 'text-purple-700 bg-purple-50' : 'text-blue-700 bg-blue-50'}`}>
+                                                    {tire.usedByTruckId === 'MISC-OUT' ? 'MISC-OUT' : (trucks.find(t => t.id === tire.usedByTruckId)?.plateNumber ?? tire.usedByTruckId)}
+                                                </span>
+                                                {tire.usedByTruckId === 'MISC-OUT' && (
+                                                    <div className="text-xs text-slate-500 mt-1 max-w-xs">{tire.description}</div>
+                                                )}
+                                            </td>
+                                            <td className="p-4 font-medium text-slate-800">{tire.itemName}</td>
+                                            <td className="p-4">
+                                                <span className="font-mono font-bold text-orange-700 bg-orange-50 px-2 py-0.5 rounded text-xs">
+                                                    {tire.serialNumber || '-'}
+                                                </span>
+                                            </td>
+                                            <td className="p-4 text-slate-600">{tire.supplierName}</td>
+                                            <td className="p-4 text-right font-semibold text-slate-800">{formatCurrency(tire.price)}</td>
+                                        </tr>
+                                    ))}
                                 </tbody>
                             </table>
                         )}
