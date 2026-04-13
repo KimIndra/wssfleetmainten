@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TireStock, Truck } from '../types';
 import { formatCurrency } from '../utils';
 import {
@@ -39,9 +39,17 @@ const TireStockManagement: React.FC<TireStockManagementProps> = ({
     const [formDesc, setFormDesc] = useState('');
     const [formPrice, setFormPrice] = useState(0);
 
-    // Misc out state
-    const [miscOutTire, setMiscOutTire] = useState<TireStock | null>(null);
-    const [miscOutDesc, setMiscOutDesc] = useState('');
+    // Misc out form state
+    const [showOutForm, setShowOutForm] = useState(false);
+    const [outSelectedTireId, setOutSelectedTireId] = useState('');
+    const [outDesc, setOutDesc] = useState('');
+
+    useEffect(() => {
+        setShowForm(false);
+        setShowOutForm(false);
+        if (activeTab === 'misc_in') setFormType('misc_in');
+        else if (activeTab === 'in') setFormType('normal');
+    }, [activeTab]);
 
     const resetForm = () => {
         setFormDate(new Date().toISOString().split('T')[0]);
@@ -93,20 +101,24 @@ const TireStockManagement: React.FC<TireStockManagementProps> = ({
         }
     };
 
-    const handleMiscOutSubmit = async (e: React.FormEvent) => {
+    const handleOutFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!miscOutTire || !onUpdateTire) return;
+        if (!outSelectedTireId || !onUpdateTire) return;
+        const selected = tireStock.find(t => t.id === outSelectedTireId);
+        if (!selected) return;
+        
         try {
-            await onUpdateTire(miscOutTire.id, {
+            await onUpdateTire(selected.id, {
                 status: 'used',
                 usedByTruckId: 'MISC-OUT',
                 usedDate: new Date().toISOString().split('T')[0],
-                description: miscOutTire.description 
-                    ? `${miscOutTire.description} | Misc Out: ${miscOutDesc}` 
-                    : `Misc Out: ${miscOutDesc}`
+                description: selected.description 
+                    ? `${selected.description} | Misc Out: ${outDesc}` 
+                    : `Misc Out: ${outDesc}`
             });
-            setMiscOutTire(null);
-            setMiscOutDesc('');
+            setShowOutForm(false);
+            setOutSelectedTireId('');
+            setOutDesc('');
         } catch (err: any) {
             alert('Gagal Misc Out: ' + err.message);
         }
@@ -161,13 +173,27 @@ const TireStockManagement: React.FC<TireStockManagementProps> = ({
                             <p className="text-sm text-slate-500">Kelola stok ban masuk dari supplier dan pemakaian</p>
                         </div>
                     </div>
-                    <button
-                        onClick={() => setShowForm(!showForm)}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-semibold shadow-lg shadow-orange-200 hover:shadow-xl hover:from-orange-600 hover:to-red-600 transition-all"
-                    >
-                        {showForm ? <X size={18} /> : <Plus size={18} />}
-                        {showForm ? 'Tutup Form' : 'Tambah Stock Ban'}
-                    </button>
+                    {activeTab === 'misc_out' && (
+                        <button
+                            onClick={() => setShowOutForm(!showOutForm)}
+                            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white rounded-xl font-semibold shadow-lg shadow-purple-200 hover:shadow-xl hover:from-purple-600 hover:to-fuchsia-600 transition-all"
+                        >
+                            {showOutForm ? <X size={18} /> : <LogOut size={18} />}
+                            {showOutForm ? 'Tutup Form' : 'Pengeluaran MISC OUT'}
+                        </button>
+                    )}
+                    {(activeTab === 'in' || activeTab === 'misc_in') && (
+                        <button
+                            onClick={() => {
+                                setShowForm(!showForm);
+                                setFormType(activeTab === 'misc_in' ? 'misc_in' : 'normal');
+                            }}
+                            className={`flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r text-white rounded-xl font-semibold shadow-lg transition-all ${activeTab === 'misc_in' ? 'from-blue-500 to-indigo-500 shadow-blue-200 hover:from-blue-600 hover:to-indigo-600' : 'from-orange-500 to-red-500 shadow-orange-200 hover:from-orange-600 hover:to-red-600'}`}
+                        >
+                            {showForm ? <X size={18} /> : <Plus size={18} />}
+                            {showForm ? 'Tutup Form' : (activeTab === 'misc_in' ? 'Tambah MISC IN' : 'Tambah Stock IN')}
+                        </button>
+                    )}
                 </div>
 
                 {/* Success Banner */}
@@ -178,48 +204,7 @@ const TireStockManagement: React.FC<TireStockManagementProps> = ({
                     </div>
                 )}
 
-                {/* Misc Out Modal */}
-                {miscOutTire && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-                        <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-                            <h3 className="text-xl font-bold text-slate-800 mb-2 flex items-center gap-2">
-                                <LogOut className="text-orange-500" /> Misc Out
-                            </h3>
-                            <p className="text-slate-600 text-sm mb-4">
-                                Pengeluaran ban {miscOutTire.itemName} ({miscOutTire.serialNumber || '-'}) secara langsung tanpa transaksi service.
-                            </p>
-                            <form onSubmit={handleMiscOutSubmit}>
-                                <div className="mb-4">
-                                    <label className="block text-sm font-medium text-slate-600 mb-1">Keterangan / Alasan Pengeluaran <span className="text-red-400">*</span></label>
-                                    <textarea 
-                                        required 
-                                        autoFocus
-                                        rows={3}
-                                        placeholder="Contoh: Dipakai untuk serep, rusak, dll..."
-                                        className="w-full border border-slate-200 p-3 rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none bg-slate-50 focus:bg-white resize-none"
-                                        value={miscOutDesc}
-                                        onChange={e => setMiscOutDesc(e.target.value)}
-                                    />
-                                </div>
-                                <div className="flex gap-3 justify-end">
-                                    <button 
-                                        type="button" 
-                                        onClick={() => { setMiscOutTire(null); setMiscOutDesc(''); }}
-                                        className="px-4 py-2 text-slate-500 font-medium hover:bg-slate-100 rounded-lg transition"
-                                    >
-                                        Batal
-                                    </button>
-                                    <button 
-                                        type="submit"
-                                        className="px-4 py-2 bg-orange-500 text-white font-semibold rounded-lg hover:bg-orange-600 transition"
-                                    >
-                                        Proses Pengeluaran
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                )}
+
 
                 {/* Stats Cards */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -241,19 +226,10 @@ const TireStockManagement: React.FC<TireStockManagementProps> = ({
                 {showForm && (
                     <div className="bg-white rounded-xl shadow-sm border border-orange-100 p-6 mb-6">
                         <h3 className="text-base font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                            <Plus size={18} className="text-orange-500" /> Form Tambah Stock Ban (IN)
+                            <Plus size={18} className={formType === 'misc_in' ? 'text-blue-500' : 'text-orange-500'} /> 
+                            Form Tambah Stock Ban ({formType === 'misc_in' ? 'MISC IN' : 'IN'})
                         </h3>
                         <form onSubmit={handleSubmit}>
-                            <div className="mb-5 flex gap-6 p-3 bg-slate-50 rounded-lg border border-slate-100">
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input type="radio" name="formType" checked={formType === 'normal'} onChange={() => setFormType('normal')} className="w-4 h-4 text-orange-500 focus:ring-orange-500" /> 
-                                    <span className="font-medium text-slate-700">Pemasukan Normal (Beli)</span>
-                                </label>
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input type="radio" name="formType" checked={formType === 'misc_in'} onChange={() => { setFormType('misc_in'); setFormPrice(0); }} className="w-4 h-4 text-orange-500 focus:ring-orange-500" /> 
-                                    <span className="font-medium text-slate-700">Misc In (Tanpa Beli/Retur/Lainnya)</span>
-                                </label>
-                            </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                                 <div>
                                     <label className="block text-sm font-medium text-slate-600 mb-1">Tanggal Masuk <span className="text-red-400">*</span></label>
@@ -310,11 +286,56 @@ const TireStockManagement: React.FC<TireStockManagementProps> = ({
                                         Batal
                                     </button>
                                     <button type="submit" disabled={isSubmitting}
-                                        className="px-6 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg font-semibold hover:from-orange-600 hover:to-red-600 transition-all disabled:opacity-50 flex items-center gap-2">
+                                        className={`px-6 py-2 bg-gradient-to-r text-white rounded-lg font-semibold transition-all disabled:opacity-50 flex items-center gap-2 ${formType === 'misc_in' ? 'from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600' : 'from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600'}`}>
                                         {isSubmitting ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Plus size={16} />}
                                         Simpan Stock
                                     </button>
                                 </div>
+                            </div>
+                        </form>
+                    </div>
+                )}
+
+                {/* Form Misc Out */}
+                {showOutForm && (
+                    <div className="bg-white rounded-xl shadow-sm border border-purple-100 p-6 mb-6">
+                        <h3 className="text-base font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                            <LogOut size={18} className="text-purple-500" /> Form Pengeluaran Ban (MISC OUT)
+                        </h3>
+                        <form onSubmit={handleOutFormSubmit}>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-600 mb-1">Pilih Ban Tersedia <span className="text-red-400">*</span></label>
+                                    <select
+                                        required
+                                        className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-purple-400 outline-none bg-slate-50 focus:bg-white"
+                                        value={outSelectedTireId}
+                                        onChange={e => setOutSelectedTireId(e.target.value)}
+                                    >
+                                        <option value="">-- Pilih Ban --</option>
+                                        {tireStock.filter(t => t.status === 'available').map(t => (
+                                            <option key={t.id} value={t.id}>
+                                                {t.itemName} ({t.serialNumber || 'Tanpa Seri'}) - {t.supplierName}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-600 mb-1">Keterangan / Alasan <span className="text-red-400">*</span></label>
+                                    <input type="text" required placeholder="Cth: Dipakai untuk serep cadangan..."
+                                        className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-purple-400 outline-none bg-slate-50 focus:bg-white"
+                                        value={outDesc} onChange={e => setOutDesc(e.target.value)} />
+                                </div>
+                            </div>
+                            <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+                                <button type="button" onClick={() => { setShowOutForm(false); setOutDesc(''); setOutSelectedTireId(''); }}
+                                    className="px-4 py-2 text-slate-500 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                                    Batal
+                                </button>
+                                <button type="submit" disabled={!outSelectedTireId || !onUpdateTire}
+                                    className="px-6 py-2 bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white rounded-lg font-semibold hover:from-purple-600 hover:to-fuchsia-600 transition-all disabled:opacity-50 flex items-center gap-2">
+                                    <LogOut size={16} /> Proses Pengeluaran
+                                </button>
                             </div>
                         </form>
                     </div>
@@ -445,13 +466,6 @@ const TireStockManagement: React.FC<TireStockManagementProps> = ({
                                             <td className="p-4">
                                                 {tire.status === 'available' && (
                                                     <div className="flex gap-2">
-                                                        <button
-                                                            onClick={() => setMiscOutTire(tire)}
-                                                            title="Keluarkan Ban (Misc Out)"
-                                                            className="p-1.5 text-orange-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors border border-transparent hover:border-orange-200"
-                                                        >
-                                                            <LogOut size={16} />
-                                                        </button>
                                                         <button
                                                             onClick={() => handleDelete(tire.id, tire.serialNumber)}
                                                             title="Hapus Ban"
