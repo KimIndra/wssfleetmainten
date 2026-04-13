@@ -3,7 +3,7 @@ import { TireStock, Truck } from '../types';
 import { formatCurrency } from '../utils';
 import {
     Plus, Trash2, Package, CheckCircle, XCircle,
-    Search, ChevronDown, ChevronUp, Download, Filter, X, LogOut
+    Search, ChevronDown, ChevronUp, Download, Filter, X, LogOut, ArrowRightLeft
 } from 'lucide-react';
 import { api } from '../lib/api';
 
@@ -44,9 +44,16 @@ const TireStockManagement: React.FC<TireStockManagementProps> = ({
     const [outSelectedTireId, setOutSelectedTireId] = useState('');
     const [outDesc, setOutDesc] = useState('');
 
+    // Transfer (Mutasi) form state
+    const [showTransferForm, setShowTransferForm] = useState(false);
+    const [transferTireId, setTransferTireId] = useState('');
+    const [transferTruckId, setTransferTruckId] = useState('');
+    const [transferDesc, setTransferDesc] = useState('');
+
     useEffect(() => {
         setShowForm(false);
         setShowOutForm(false);
+        setShowTransferForm(false);
         if (activeTab === 'misc_in') setFormType('misc_in');
         else if (activeTab === 'in') setFormType('normal');
     }, [activeTab]);
@@ -124,6 +131,36 @@ const TireStockManagement: React.FC<TireStockManagementProps> = ({
         }
     };
 
+    const handleTransferFormSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!transferTireId || !transferTruckId || !onUpdateTire) return;
+
+        const selectedTire = tireStock.find(t => t.id === transferTireId);
+        if (!selectedTire) return;
+        if (selectedTire.usedByTruckId === transferTruckId) {
+            alert('Truk tujuan tidak boleh sama dengan truk asal (sedang dipakai di truk tersebut).');
+            return;
+        }
+
+        const originTruck = trucks.find(t => t.id === selectedTire.usedByTruckId)?.plateNumber || selectedTire.usedByTruckId;
+        const destTruck = trucks.find(t => t.id === transferTruckId)?.plateNumber || transferTruckId;
+        
+        try {
+            await onUpdateTire(selectedTire.id, {
+                usedByTruckId: transferTruckId,
+                description: selectedTire.description 
+                    ? `${selectedTire.description} | Mutasi dari ${originTruck} ke ${destTruck}${transferDesc ? ' - ' + transferDesc : ''}`
+                    : `Mutasi dari ${originTruck} ke ${destTruck}${transferDesc ? ' - ' + transferDesc : ''}`
+            });
+            setShowTransferForm(false);
+            setTransferTireId('');
+            setTransferTruckId('');
+            setTransferDesc('');
+        } catch (err: any) {
+            alert('Gagal Mutasi Ban: ' + err.message);
+        }
+    };
+
     const isMiscIn = (t: TireStock) => t.price === 0 || (t.description || '').includes('(MISC IN)');
     const isMiscOut = (t: TireStock) => t.status === 'used' && t.usedByTruckId === 'MISC-OUT';
 
@@ -180,6 +217,15 @@ const TireStockManagement: React.FC<TireStockManagementProps> = ({
                         >
                             {showOutForm ? <X size={18} /> : <LogOut size={18} />}
                             {showOutForm ? 'Tutup Form' : 'Pengeluaran MISC OUT'}
+                        </button>
+                    )}
+                    {activeTab === 'out' && (
+                        <button
+                            onClick={() => setShowTransferForm(!showTransferForm)}
+                            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl font-semibold shadow-lg shadow-blue-200 hover:shadow-xl hover:from-blue-600 hover:to-indigo-600 transition-all"
+                        >
+                            {showTransferForm ? <X size={18} /> : <ArrowRightLeft size={18} />}
+                            {showTransferForm ? 'Tutup Form' : 'Mutasi Ban Antar Truk'}
                         </button>
                     )}
                     {(activeTab === 'in' || activeTab === 'misc_in') && (
@@ -341,6 +387,67 @@ const TireStockManagement: React.FC<TireStockManagementProps> = ({
                     </div>
                 )}
 
+                {/* Form Mutasi Ban */}
+                {showTransferForm && (
+                    <div className="bg-white rounded-xl shadow-sm border border-blue-100 p-6 mb-6">
+                        <h3 className="text-base font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                            <ArrowRightLeft size={18} className="text-blue-500" /> Form Mutasi Pindah Truk
+                        </h3>
+                        <form onSubmit={handleTransferFormSubmit}>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-600 mb-1">Pilih Ban yang Terpakai <span className="text-red-400">*</span></label>
+                                    <select
+                                        required
+                                        className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none bg-slate-50 focus:bg-white"
+                                        value={transferTireId}
+                                        onChange={e => setTransferTireId(e.target.value)}
+                                    >
+                                        <option value="">-- Pilih Ban --</option>
+                                        {normalOutTires.map(t => (
+                                            <option key={t.id} value={t.id}>
+                                                [Truk: {trucks.find(tr => tr.id === t.usedByTruckId)?.plateNumber || t.usedByTruckId}] {t.itemName} ({t.serialNumber || '-'})
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                     <label className="block text-sm font-medium text-slate-600 mb-1">Pindah ke Truk Baru <span className="text-red-400">*</span></label>
+                                    <select
+                                        required
+                                        className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none bg-slate-50 focus:bg-white"
+                                        value={transferTruckId}
+                                        onChange={e => setTransferTruckId(e.target.value)}
+                                    >
+                                        <option value="">-- Pilih Truk Tujuan --</option>
+                                        {trucks.map(t => (
+                                            <option key={t.id} value={t.id}>
+                                                {t.plateNumber}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-600 mb-1">Alasan Mutasi (opsional)</label>
+                                    <input type="text" placeholder="Cth: Ban serep dialihkan..."
+                                        className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none bg-slate-50 focus:bg-white"
+                                        value={transferDesc} onChange={e => setTransferDesc(e.target.value)} />
+                                </div>
+                            </div>
+                            <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+                                <button type="button" onClick={() => { setShowTransferForm(false); setTransferDesc(''); setTransferTireId(''); setTransferTruckId(''); }}
+                                    className="px-4 py-2 text-slate-500 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                                    Batal
+                                </button>
+                                <button type="submit" disabled={!transferTireId || !transferTruckId || !onUpdateTire}
+                                    className="px-6 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-indigo-600 transition-all disabled:opacity-50 flex items-center gap-2">
+                                    <ArrowRightLeft size={16} /> Proses Mutasi
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                )}
+
                 {/* Tabs */}
                 <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
                     <div className="flex border-b border-slate-200 overflow-x-auto hide-scrollbar">
@@ -491,6 +598,7 @@ const TireStockManagement: React.FC<TireStockManagementProps> = ({
                                         <th className="p-4 font-semibold font-mono">No Seri</th>
                                         <th className="p-4 font-semibold">Supplier Asal</th>
                                         <th className="p-4 font-semibold text-right">Harga Asal</th>
+                                        {activeTab === 'out' && <th className="p-4 w-12"></th>}
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -519,6 +627,17 @@ const TireStockManagement: React.FC<TireStockManagementProps> = ({
                                             </td>
                                             <td className="p-4 text-slate-600">{tire.supplierName}</td>
                                             <td className="p-4 text-right font-semibold text-slate-800">{formatCurrency(tire.price)}</td>
+                                            {activeTab === 'out' && (
+                                                <td className="p-4">
+                                                    <button
+                                                        onClick={() => { setTransferTireId(tire.id); setShowTransferForm(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                                                        title="Mutasi Ban ke Truk Lain"
+                                                        className="p-1.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-200"
+                                                    >
+                                                        <ArrowRightLeft size={16} />
+                                                    </button>
+                                                </td>
+                                            )}
                                         </tr>
                                     ))}
                                 </tbody>
